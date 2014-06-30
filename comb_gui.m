@@ -1,26 +1,3 @@
-% Copyright (c) 2013, T. Herr, I. Mirgorodskiy, G. Lihachev, M.L. Gorodetsky
-% All rights reserved.
-% 
-% Redistribution and use in source and binary forms, with or without
-% modification, are permitted provided that the following conditions are met:
-% 
-% Redistributions of source code must retain the above copyright notice,
-% this list of conditions and the following disclaimer.
-% Redistributions in binary form must reproduce the above copyright notice,
-% this list of conditions and the following disclaimer in the documentation
-% and/or other materials provided with the distribution.
-% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-% AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-% ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-% LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-% CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-% SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-% STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-% OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
-
 function varargout = comb_gui(varargin)
 % COMB_GUI MATLAB code for comb_gui.fig
 %      COMB_GUI, by itself, creates a new COMB_GUI or raises the existing
@@ -45,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 14-Feb-2014 01:09:02
+% Last Modified by GUIDE v2.5 30-Jun-2014 14:13:29
 
 % Begin initialization code - DO NOT EDIT
 
@@ -910,3 +887,21 @@ nms_b=str2double(get(hObject,'String'));
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --------------------------------------------------------------------
+function import_modes_Callback(hObject, eventdata, handles)
+% hObject    handle to import_modes (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global modes_number;
+global reslist;
+global pump_freq;
+[FileName,~,~] = uigetfile('*.*');
+reslist = csvread(FileName);
+modes_number = length(reslist);
+pump_freq=reslist(floor(modes_number/2));
+c = 299792458;
+lambda=c/pump_freq*10^9; % in nm
+set(handles.wavelength,'String',lambda);
+set(handles.modes_number,'String',modes_number);
