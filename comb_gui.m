@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 30-Jun-2014 14:13:29
+% Last Modified by GUIDE v2.5 02-Jul-2014 13:09:56
 
 % Begin initialization code - DO NOT EDIT
 
@@ -104,9 +104,10 @@ global progress;
 global snapshot;
 global reslist;
 global sweep_speed;
+global pump_profile;
 
-if validate(handles)==true 
-    change_edits_background();
+% if validate(handles)==true 
+%     change_edits_background();
     progress=hObject;
     set(hObject,'Enable','off');
     set(handles.slider3,'Enable','off');
@@ -119,14 +120,9 @@ if validate(handles)==true
     max_slider=get(handles.slider3,'Max');
     slider_value=(snapshot-detune_s)/(detune_e-detune_s)*(max_slider-min_slider)+min_slider;
     
-    % build resonance list    
-    reslist = buildResList(...
-        modes_number, ... % number of modes
-        pump_freq, ... %approx pump freq
-        fsr, ... % FSR
-        d2, ... % D2/2pi
-        d3 ... % D3/2pi
-        );
+    detune_s 
+    detune_e
+    pump_power 
     %simulate
     combsim(...
         reslist, ...% list of resonance frequencies
@@ -153,7 +149,7 @@ if validate(handles)==true
     plotcomb(filename,snapshot,'all');
     set(handles.slider3,'Enable','on');
     set(handles.slider3,'Value',slider_value);
-end
+% end
 
 % --- Executes on button press in ssfm_btn.
 function ssfm_btn_Callback(hObject, eventdata, handles)
@@ -316,180 +312,6 @@ modes_number=int32(str2double(get(hObject,'String')));
 %        str2double(get(hObject,'String')) returns contents of modes_number as a double
 
 
-% --- Executes during object creation, after setting all properties.
-function modes_number_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to modes_number (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global modes_hanlder;
-modes_hanlder=hObject;
-global modes_number;
-modes_number=int32(str2double(get(hObject,'String')));
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-function wavelength_Callback(hObject, eventdata, handles)
-% hObject    handle to wavelength (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global pump_freq;
-c = 299792458;
-lambda=str2double(get(hObject,'String'))*10^-9; % in nm
-pump_freq=c/lambda;
-              
-% Hints: get(hObject,'String') returns contents of wavelength as text
-%        str2double(get(hObject,'String')) returns contents of wavelength as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function wavelength_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to wavelength (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global wavelength_handler;
-wavelength_handler=hObject;
-global pump_freq;
-c = 299792458;
-lambda=str2double(get(hObject,'String'))*10^-9; % in nm
-pump_freq=c/lambda;
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-function FSR_Callback(hObject, eventdata, handles)
-% hObject    handle to FSR (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global fsr;
-fsr=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of FSR as text
-%        str2double(get(hObject,'String')) returns contents of FSR as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function FSR_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to FSR (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global fsr_handler;
-fsr_handler=hObject;
-global fsr;
-fsr=str2double(get(hObject,'String'));
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-function d2_Callback(hObject, eventdata, handles)
-% hObject    handle to d2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global d2;
-d2=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of d2 as text
-%        str2double(get(hObject,'String')) returns contents of d2 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function d2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to d2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global d2_handler;
-d2_handler=hObject;
-global d2;
-d2=str2double(get(hObject,'String'));
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function d3_Callback(hObject, eventdata, handles)
-% hObject    handle to d3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global d3;
-d3=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of d3 as text
-%        str2double(get(hObject,'String')) returns contents of d3 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function d3_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to d3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global d3_handler;
-d3_handler=hObject;
-global d3;
-d3=str2double(get(hObject,'String'));
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-function pump_power_Callback(hObject, eventdata, handles)
-% hObject    handle to pump_power (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global pump_power;
-pump_power=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of pump_power as text
-%        str2double(get(hObject,'String')) returns contents of pump_power as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function pump_power_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to pump_power (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global pump_power_handler;
-pump_power_handler=hObject;
-global pump_power;
-pump_power=str2double(get(hObject,'String'));
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function detune_s_Callback(hObject, eventdata, handles)
-% hObject    handle to detune_s (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global detune_s;
-detune_s=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of detune_s as text
-%        str2double(get(hObject,'String')) returns contents of detune_s as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function detune_s_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to detune_s (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global detune_s;
-global detune_s_handler;
-detune_s_handler=hObject;
-detune_s=str2double(get(hObject,'String'));
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
 function linewidth_Callback(hObject, eventdata, handles)
 % hObject    handle to linewidth (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -615,38 +437,11 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-function detune_e_Callback(hObject, eventdata, handles)
-% hObject    handle to detune_e (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global detune_e;
-detune_e=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of detune_e as text
-%        str2double(get(hObject,'String')) returns contents of detune_e as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function detune_e_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to detune_e (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global detune_e_handler;
-detune_e_handler=hObject;
-global detune_e;
-detune_e=str2double(get(hObject,'String'));
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
 % --- Executes during object creation, after setting all properties.
 function figure1_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
-
-
 
 function sweep_speed_Callback(hObject, eventdata, handles)
 % hObject    handle to sweep_speed (see GCBO)
@@ -740,158 +535,48 @@ global snapshot;
 global filename;
 plotcomb(filename,snapshot,'waveform');
 
-function res=validate(handles)
-global modes_hanlder;
-global wavelength_handler;
-global fsr_handler;
-global d2_handler;
-global d3_handler;
-global pump_power_handler;
-global detune_s_handler;
-global linewidth_handler;
-global refr_index_handler;
-global nonlin_index_handler;
-global mode_volume_handler;
-global coupling_handler;
-global sweep_speed_handler;
-global detune_e_handler;
-
-res=true;
-valid_modes=int32(str2double(get(handles.modes_number,'String')));
-if isnan(valid_modes)|| valid_modes<3 || valid_modes> 10000 || rem(valid_modes,2)==0
-    set(modes_hanlder,'BackgroundColor','r');
-    res=false;
-end
-if isnan(str2double(get(wavelength_handler,'String'))) || str2double(get(wavelength_handler,'String')) <=0
-    set(wavelength_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(fsr_handler,'String'))) || str2double(get(fsr_handler,'String')) <=0
-    set(fsr_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(d2_handler,'String')))
-    set(d2_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(d3_handler,'String')))
-    set(d3_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(pump_power_handler,'String'))) || str2double(get(pump_power_handler,'String')) <=0
-    set(pump_power_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(linewidth_handler,'String'))) || str2double(get(linewidth_handler,'String')) <=0
-    set(linewidth_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(refr_index_handler,'String'))) || str2double(get(refr_index_handler,'String')) <=0
-    set(refr_index_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(nonlin_index_handler,'String'))) || str2double(get(nonlin_index_handler,'String')) <=0
-    set(nonlin_index_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(mode_volume_handler,'String'))) || str2double(get(mode_volume_handler,'String')) <=0
-    set(mode_volume_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(coupling_handler,'String'))) || str2double(get(coupling_handler,'String')) <=0
-    set(coupling_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(sweep_speed_handler,'String'))) || str2double(get(sweep_speed_handler,'String')) <=0
-    set(sweep_speed_handler,'BackgroundColor','r'); res=false;
-end
-if isnan(str2double(get(detune_e_handler,'String'))) || isnan(str2double(get(detune_s_handler,'String')))|| str2double(get(detune_e_handler,'String'))<=str2double(get(detune_s_handler,'String'))
-    set(detune_e_handler,'BackgroundColor','r');
-    set(detune_s_handler,'BackgroundColor','r');
-    res=false;
-end
-if isnan(str2double(get(detune_s_handler,'String'))) || isnan(str2double(get(detune_s_handler,'String')))
-    set(detune_s_handler,'BackgroundColor','r');
-    res=false;
-end
-
-function change_edits_background()
-global modes_hanlder;
-global wavelength_handler;
-global fsr_handler;
-global d2_handler;
-global d3_handler;
-global pump_power_handler;
-global detune_s_handler;
-global linewidth_handler;
-global refr_index_handler;
-global nonlin_index_handler;
-global mode_volume_handler;
-global coupling_handler;
-global detune_e_handler;
-set(modes_hanlder,'BackgroundColor','w');
-set(wavelength_handler,'BackgroundColor','w');
-set(fsr_handler,'BackgroundColor','w');
-set(d2_handler,'BackgroundColor','w');
-set(d3_handler,'BackgroundColor','w');
-set(pump_power_handler,'BackgroundColor','w');
-set(detune_s_handler,'BackgroundColor','w');
-set(linewidth_handler,'BackgroundColor','w');
-set(refr_index_handler,'BackgroundColor','w');
-set(nonlin_index_handler,'BackgroundColor','w');
-set(mode_volume_handler,'BackgroundColor','w');
-set(coupling_handler,'BackgroundColor','w');
-set(detune_e_handler,'BackgroundColor','w');
-
-
-
-function nms_a_Callback(hObject, eventdata, handles)
-% hObject    handle to edit16 (see GCBO)
+% --- Executes on button press in edit_modes.
+function edit_modes_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_modes (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+global modes_number;
+global pump_freq;
+global fsr;
+global d2;
+global d3;
 global nms_a;
-nms_a=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of edit16 as text
-%        str2double(get(hObject,'String')) returns contents of edit16 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function nms_a_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit16 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-global nms_a;
-nms_a=str2double(get(hObject,'String'));
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function nms_b_Callback(hObject, eventdata, handles)
-% hObject    handle to edit17 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 global nms_b;
-nms_b=str2double(get(hObject,'String'));
+global linewidth;
+global reslist;
 
-% Hints: get(hObject,'String') returns contents of edit17 as text
-%        str2double(get(hObject,'String')) returns contents of edit17 as a double
+prompt={'Modes number',...
+    'Wavelength (nm)',...
+    'FSR (Hz)', ...
+    'D2 (Hz)', ...
+    'D3 (Hz)' ...
+    'Distortion, a' ...
+    'Distortion, b'
+    };
+defaultanswer={'201','1553','35e9','1e4','0','0','0'};
+options.Resize='on';
+options.WindowStyle='normal';
+answer=inputdlg(prompt,'Dispersion',1,defaultanswer,options);
+modes_number=int32(str2double(answer{1}));
+c = 299792458;
+lambda=str2double(answer{2})*10^-9; % in nm
+pump_freq=c/lambda;
+fsr=str2double(answer{3});
+d2=str2double(answer{4});
+d3=str2double(answer{5});
+nms_a=str2double(answer{6});
+nms_b=str2double(answer{7});
+% TODO: linewidth must be set prior eigenmodes calculation
+reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b,linewidth);
 
-
-% --- Executes during object creation, after setting all properties.
-function nms_b_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit17 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-global nms_b;
-nms_b=str2double(get(hObject,'String'));
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --------------------------------------------------------------------
-function import_modes_Callback(hObject, eventdata, handles)
-% hObject    handle to import_modes (see GCBO)
+% --- Executes on button press in import_eigenmodes.
+function import_eigenmodes_Callback(hObject, eventdata, handles)
+% hObject    handle to import_eigenmodes (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global modes_number;
@@ -900,8 +585,49 @@ global pump_freq;
 [FileName,~,~] = uigetfile('*.*');
 reslist = csvread(FileName);
 modes_number = length(reslist);
-pump_freq=reslist(floor(modes_number/2));
-c = 299792458;
-lambda=c/pump_freq*10^9; % in nm
-set(handles.wavelength,'String',lambda);
-set(handles.modes_number,'String',modes_number);
+pump_freq=reslist(ceil(modes_number/2));
+
+
+% --- Executes on button press in pump_edit.
+function pump_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to pump_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in pump_import.
+function pump_import_Callback(hObject, eventdata, handles)
+% hObject    handle to pump_import (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global pump_profile;
+[FileName,~,~] = uigetfile('*.*');
+pump_profile = csvread(FileName);
+
+
+% --- Executes on button press in edit_detuning.
+function edit_detuning_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_detuning (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in import_detuning.
+function import_detuning_Callback(hObject, eventdata, handles)
+% hObject    handle to import_detuning (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in seeding_edit.
+function seeding_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to seeding_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in seeding_import.
+function seeding_import_Callback(hObject, eventdata, handles)
+% hObject    handle to seeding_import (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

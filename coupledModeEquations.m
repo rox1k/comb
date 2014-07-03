@@ -25,6 +25,7 @@ for k = 1:nModes
 %         + sqrt(2*g/kappa)*0.5*(randn(1)+1i*randn(1));
 end
 
+% TODO: redo
 % adding pump to the central mode (pumped mode)
 da(round(nModes/2)) = da(round(nModes/2)) + get_f(t);
 

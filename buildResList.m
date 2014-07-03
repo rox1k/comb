@@ -1,8 +1,5 @@
-function reslist = buildResList(NumberOfModes, CenterFreq, FSR, D2over2pi, D3over2pi)
+function reslist = buildResList(NumberOfModes, CenterFreq, FSR, D2over2pi, D3over2pi, nms_a, nms_b, linewidth)
 %returns resonance frequencies in units of Hz according to FSR, D2, D3
-global nms_a;
-global nms_b;
-global linewidth;
 list = zeros(NumberOfModes,1);
 for k=1:size(list,1)
     list(k) = CenterFreq ...
