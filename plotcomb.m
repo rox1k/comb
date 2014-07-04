@@ -29,7 +29,7 @@ if strfind(filename, 'coupledeq')==1
     size_fi = max(size(fi));
     pulse = zeros(1,size_fi);    
     for jj=1:size_fi
-        pulse(1,jj) = sum(Y(ind,:).*double(exp(-1i*N*fi(jj))),2);
+        pulse(1,jj) = sum(Y(ind,:).*exp(-1i*double(N*fi(jj))),2);
     end
 else
     % get parameters from llessfm file

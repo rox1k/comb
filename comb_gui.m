@@ -617,7 +617,7 @@ function pump_edit_Callback(hObject, eventdata, handles)
 global pump_profile;
 global timesteps_cme;
 prompt={'Pump'};
-defaultanswer={'50*ones(1,timesteps_cme)'};
+defaultanswer={'50e-3*ones(1,timesteps_cme)'};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Pump profile',1,defaultanswer,options);
@@ -718,7 +718,7 @@ function pump_edit_CreateFcn(hObject, eventdata, handles)
 % default pump profile
 global pump_profile;
 global timesteps_cme;
-pump_profile=50*ones(1,timesteps_cme);
+pump_profile=50e-3*ones(1,timesteps_cme);
 
 % --- Executes during object creation, after setting all properties.
 function edit_detuning_CreateFcn(hObject, eventdata, handles)
