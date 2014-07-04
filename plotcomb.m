@@ -1,20 +1,21 @@
 function plotcomb(filename,Snapshot,flag)
 
-c = 299792458;
+global c;
 file = load(filename);
 reslist=file.a_mode_list;
-detune_start=file.a_detune_s;
-detune_end=file.a_detune_e;
-
+det=file.a_detuning_profile;
+pump_profile=file.a_pump_profile;
+initial_conditions=file.a_initial_conditions;
 if strfind(filename, 'coupledeq')==1
     % get parameters from coupled eq file
-    nModes = file.nModes; % number of modes
+    modes_number = file.a_modes_number; % number of modes
     Y = file.Y; % field amplitudes for every mode
     T = file.T; % time
-    det=linspace(detune_start,detune_end,size(T,1));
+    
+%     det=linspace(detune_start,detune_end,size(T,1));
     fi=linspace(-pi,pi,size(Y,2));    
 
-    N = (1-round(nModes/2):1:round(nModes/2)-1); % mode numbers
+    N = (1-round(modes_number/2):1:round(modes_number/2)-1); % mode numbers
 %     w = file.omega; % frequency corresponding to each mode
     spectrum_plot=file.spectrum_plot;
     spectrum_plot_transposed=file.spectrum_plot_transposed;
@@ -23,11 +24,12 @@ if strfind(filename, 'coupledeq')==1
 %     fi = pi*N/(round(nModes/2)-1); % angular coordinate.
     % number of points in the range of [-pi;pi] or [0;2pi]
     max_amp=max(int_pow_a);
+    % TODO: redo using indexes
     ind = find(det>=Snapshot,1);
     size_fi = max(size(fi));
     pulse = zeros(1,size_fi);    
     for jj=1:size_fi
-        pulse(1,jj) = sum(Y(ind,:).*exp(-1i*N*fi(jj)),2);
+        pulse(1,jj) = sum(Y(ind,:).*double(exp(-1i*N*fi(jj))),2);
     end
 else
     % get parameters from llessfm file
@@ -77,6 +79,23 @@ switch flag
             xlabel('$\phi$','interpreter','latex')
             ylabel('$\Psi$','interpreter','latex')
             title ('Waveform');
+            
+            figure()
+            plot(linspace(1,length(pump_profile),length(pump_profile)),pump_profile)
+            title ('Pump profile');
+            
+            figure()
+            plot(linspace(1,length(initial_conditions),length(initial_conditions)),abs(initial_conditions))
+            title ('Initial_conditions');
+            
+            figure()
+            plot(linspace(1,length(det),length(det)),det)
+            title ('Detuning');
+            
+            figure()
+            plot(N,reslist)
+            title ('Eigen modes');
+            
         else
             subplot(2,2,1:2)
             plot(det,int_field);
