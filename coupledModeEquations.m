@@ -32,9 +32,8 @@ fNL = fa.*conj(fa).*fa;
 NL = ifft(fNL);
 
 for k = 1:modes_number
-  da(k)=-(1+1i/double(kappa*(omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+  da(k)=-(1+1i/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 end
-
 % adding pump to the central mode (pumped mode)
 da(round(modes_number/2)) = da(round(modes_number/2)) + force;
 
