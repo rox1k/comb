@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 04-Jul-2014 15:30:28
+% Last Modified by GUIDE v2.5 07-Jul-2014 12:34:18
 
 % Begin initialization code - DO NOT EDIT
 
@@ -511,43 +511,6 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
 
-% --- Executes on button press in total_fld_btn.
-function total_fld_btn_Callback(hObject, eventdata, handles)
-% hObject    handle to total_fld_btn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global snapshot;
-global filename;
-plotcomb(filename,snapshot,'total_field');
-
-% --- Executes on button press in amp_button.
-function amp_button_Callback(hObject, eventdata, handles)
-% hObject    handle to amp_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global snapshot;
-global filename;
-plotcomb(filename,snapshot,'amps');
-
-
-% --- Executes on button press in spectrum_button.
-function spectrum_button_Callback(hObject, eventdata, handles)
-% hObject    handle to spectrum_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global snapshot;
-global filename;
-plotcomb(filename,snapshot,'spectrum');
-
-% --- Executes on button press in waveform_btn.
-function waveform_btn_Callback(hObject, eventdata, handles)
-% hObject    handle to waveform_btn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global snapshot;
-global filename;
-plotcomb(filename,snapshot,'waveform');
-
 % --- Executes on button press in edit_modes.
 function edit_modes_Callback(hObject, eventdata, handles)
 % hObject    handle to edit_modes (see GCBO)
@@ -742,3 +705,60 @@ function seeding_edit_CreateFcn(hObject, eventdata, handles)
 global initial_conditions;
 global modes_number;
 initial_conditions=randn(1,modes_number)+1i*randn(1,modes_number);
+
+
+% --- Executes on selection change in popup_plot.
+function popup_plot_Callback(hObject, eventdata, handles)
+% hObject    handle to popup_plot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns popup_plot contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from popup_plot
+global snapshot;
+global filename;
+global reslist;
+global pump_profile;
+global modes_number;
+global detuning_profile;
+global initial_conditions;
+
+contents = cellstr(get(hObject,'String'));
+switch contents{get(hObject,'Value')}
+    case 'Dispersion'
+        figure
+        plot((1-round(modes_number/2):1:round(modes_number/2)-1),reslist)
+        title ('Eigenmodes');
+    case 'Pump Profile'
+        figure
+        plot(linspace(1,length(pump_profile),length(pump_profile)),pump_profile)
+        title ('Pump Profile');
+    case 'Initial Profile'
+        figure
+        plot(linspace(1,length(initial_conditions),length(initial_conditions)),abs(initial_conditions))
+        title ('Initial Profile');
+    case 'Detuning Profile'
+        figure
+        plot(linspace(1,length(detuning_profile),length(detuning_profile)),detuning_profile)
+        title ('Detuning Profile');
+    case 'Total Field'
+        plotcomb(filename,snapshot,'total_field');        
+    case 'Amplitudes'
+        plotcomb(filename,snapshot,'amps');
+    case 'Spectrum' 
+        plotcomb(filename,snapshot,'spectrum');
+    case 'Waveform'
+        plotcomb(filename,snapshot,'waveform');
+end
+
+% --- Executes during object creation, after setting all properties.
+function popup_plot_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popup_plot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

@@ -79,23 +79,7 @@ switch flag
             xlabel('$\phi$','interpreter','latex')
             ylabel('$\Psi$','interpreter','latex')
             title ('Waveform');
-            
-            figure()
-            plot(linspace(1,length(pump_profile),length(pump_profile)),pump_profile)
-            title ('Pump profile');
-            
-            figure()
-            plot(linspace(1,length(initial_conditions),length(initial_conditions)),abs(initial_conditions))
-            title ('Initial_conditions');
-            
-            figure()
-            plot(linspace(1,length(det),length(det)),det)
-            title ('Detuning');
-            
-            figure()
-            plot(N,reslist)
-            title ('Eigen modes');
-            
+                        
         else
             subplot(2,2,1:2)
             plot(det,int_field);
