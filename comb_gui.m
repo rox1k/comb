@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 07-Jul-2014 12:34:18
+% Last Modified by GUIDE v2.5 09-Jul-2014 00:35:09
 
 % Begin initialization code - DO NOT EDIT
 
@@ -56,6 +56,39 @@ global timesteps_cme;
 global hbar;
 global c;
 global pi;
+% default dispersion
+global modes_number;
+global pump_freq;
+global fsr;
+global d2;
+global d3;
+global nms_a;
+global nms_b;
+global linewidth;
+global reslist;
+global pump_profile;
+global detuning_profile;
+global initial_conditions;
+
+% defaults
+hbar = 1.05457148e-34;
+c = 299792458;
+pi = 3.14159;
+timesteps_cme = 2048;
+
+modes_number=201;
+lambda=1553*10^-9; % in nm
+pump_freq=c/lambda;
+fsr=35e9;
+d2=1e4;
+d3=0;
+nms_a=0;
+nms_b=0;
+reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b, linewidth);
+pump_profile=50e-3*ones(1,timesteps_cme);
+detuning_profile=linspace(-15,30,timesteps_cme);
+initial_conditions=randn(1,modes_number)+1i*randn(1,modes_number);
+
 
 % Choose default command line output for comb_gui
 handles.output = hObject;
@@ -68,10 +101,6 @@ guidata(hObject, handles);
 if strcmp(get(hObject,'Visible'),'off')
 
 % constants & parameters
-hbar = 1.05457148e-34;
-c = 299792458;
-pi = 3.14159;
-timesteps_cme = 2048;
 end
 
 
@@ -125,11 +154,12 @@ set(handles.slider3,'Enable','off');
 pause(.1);
 
 filename=strcat('coupledeq',datestr(fix(clock),'yyyymmddHHMMSS'));
-snapshot=detuning_profile(1)+(detuning_profile(end)-detuning_profile(1))/2;
+% snapshot=detuning_profile(1)+(detuning_profile(end)-detuning_profile(1))/2;
+snapshot=0.5;
 % adjust slider to snapshot
 min_slider=get(handles.slider3,'Min');
 max_slider=get(handles.slider3,'Max');
-slider_value=(snapshot-detuning_profile(1))/(detuning_profile(end)-detuning_profile(1))*(max_slider-min_slider)+min_slider;
+slider_value=snapshot*(max_slider-min_slider)+min_slider;
 
 omega = 2*pi*reslist; % resonance frequencies 
 d1 = 2*pi*fsr;
@@ -169,8 +199,6 @@ function ssfm_btn_Callback(hObject, eventdata, handles)
 % hObject    handle to ssfm_btn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global detune_s;
-global detune_e;
 global modes_number;
 global pump_freq;
 global fsr;
@@ -188,28 +216,19 @@ global snapshot;
 global reslist;
 global sweep_speed;
 
-if validate(handles)==true 
-    change_edits_background();
     progress=hObject;
     set(hObject,'Enable','off');
     set(handles.slider3,'Enable','off');
     pause(.1);
     
     filename=strcat('llessfm',datestr(fix(clock),'yyyymmddHHMMSS'));
-    snapshot=detune_s+(detune_e-detune_s)/2;
+%     snapshot=detune_s+(detune_e-detune_s)/2;
+    snapshot=0.5;
     % adjust slider to snapshot
     min_slider=get(handles.slider3,'Min');
     max_slider=get(handles.slider3,'Max');
-    slider_value=(snapshot-detune_s)/(detune_e-detune_s)*(max_slider-min_slider)+min_slider;
+    slider_value=snapshot*(max_slider-min_slider)+min_slider;
     
-    % build resonance list    
-    reslist = buildResList(...
-        modes_number, ... % number of modes
-        pump_freq, ... %approx pump freq
-        fsr, ... % FSR
-        d2, ... % D2/2pi
-        d3 ... % D3/2pi        
-        );
     %simulate
     llequation(...
         reslist, ...% list of resonance frequencies       
@@ -226,11 +245,7 @@ if validate(handles)==true
         mode_volume, ... % nonlin. mode volume in m^3
         filename ... % name of the file generated in the end
         )
-    
-    % by tuning time we can change speed of detuning changing
-    % during calculations. The more time you put in - the slower speed of tuning
-    % you get [detuning = detuning0 + (t - t(0)) (detuning(end)-detuning(0))/
-    % (time(end) - time(0))]
+        
     set(hObject,'String','Solve LLE');
     set(hObject,'Enable','on');
     % axes(handles.axes);
@@ -238,8 +253,6 @@ if validate(handles)==true
      plotcomb(filename,snapshot,'all');
     set(handles.slider3,'Enable','on');
     set(handles.slider3,'Value',slider_value);
-end
-
 
 % --------------------------------------------------------------------
 function FileMenu_Callback(hObject, eventdata, handles)
@@ -486,15 +499,14 @@ function slider3_Callback(hObject, eventdata, handles)
 % hObject    handle to slider3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global detune_s;
-global detune_e;
 global filename;
 global snapshot;
 
 min_slider=get(hObject,'Min');
 max_slider=get(hObject,'Max');
 value_slider=get(hObject,'Value');
-snapshot=detune_s+(detune_e-detune_s)*(value_slider-min_slider)/(max_slider-min_slider);
+% snapshot=detune_s+(detune_e-detune_s)*(value_slider-min_slider)/(max_slider-min_slider);
+snapshot=(value_slider-min_slider)/(max_slider-min_slider);
 plotcomb(filename,snapshot,'all')
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
@@ -549,7 +561,7 @@ d3=str2double(answer{5});
 nms_a=str2double(answer{6});
 nms_b=str2double(answer{7});
 % TODO: linewidth must be set prior eigenmodes calculation
-reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b,linewidth)
+reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b,linewidth);
 
 % --- Executes on button press in import_eigenmodes.
 function import_eigenmodes_Callback(hObject, eventdata, handles)
@@ -580,7 +592,8 @@ function pump_edit_Callback(hObject, eventdata, handles)
 global pump_profile;
 global timesteps_cme;
 prompt={'Pump'};
-defaultanswer={'50e-3*ones(1,timesteps_cme)'};
+% defaultanswer={'50e-3*ones(1,timesteps_cme)'};
+defaultanswer={'[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]'};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Pump profile',1,defaultanswer,options);
@@ -605,6 +618,7 @@ global detuning_profile;
 global  timesteps_cme;
 prompt={'Detuning'};
 defaultanswer={'linspace(-15,30,timesteps_cme)'};
+% defaultanswer={'[linspace(-15,10,timesteps_cme/2) 10*ones(1,timesteps_cme/2)]'};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Detuning profile',1,defaultanswer,options);
@@ -628,7 +642,8 @@ function seeding_edit_Callback(hObject, eventdata, handles)
 global initial_conditions;
 global modes_number;
 prompt={'Initial conditions'};
-defaultanswer={'randn(1,modes_number)+1i*randn(1,modes_number)'};
+% defaultanswer={'randn(1,modes_number)+1i*randn(1,modes_number)'};
+defaultanswer={'sech(25*linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)'};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Seeding',1,defaultanswer,options);
@@ -642,71 +657,6 @@ function seeding_import_Callback(hObject, eventdata, handles)
 global initial_conditions;
 [FileName,~,~] = uigetfile('*.*');
 initial_conditions = csvread(FileName);
-
-
-% --- Executes during object creation, after setting all properties.
-function edit_modes_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit_modes (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% default dispersion
-global modes_number;
-global pump_freq;
-global fsr;
-global d2;
-global d3;
-global nms_a;
-global nms_b;
-global linewidth;
-global reslist;
-global c;
-modes_number=201;
-c = 299792458;
-lambda=1553*10^-9; % in nm
-pump_freq=c/lambda;
-fsr=35e9;
-d2=1e4;
-d3=0;
-nms_a=0;
-nms_b=0;
-reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b, linewidth);
-
-% --- Executes during object creation, after setting all properties.
-function pump_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to pump_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% default pump profile
-global pump_profile;
-global timesteps_cme;
-pump_profile=50e-3*ones(1,timesteps_cme);
-
-% --- Executes during object creation, after setting all properties.
-function edit_detuning_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit_detuning (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% default detuning profile
-global detuning_profile;
-global  timesteps_cme;
-detuning_profile=linspace(-15,30,timesteps_cme);
-
-
-% --- Executes during object creation, after setting all properties.
-function seeding_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to seeding_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% default seeding
-global initial_conditions;
-global modes_number;
-initial_conditions=randn(1,modes_number)+1i*randn(1,modes_number);
-
-
 % --- Executes on selection change in popup_plot.
 function popup_plot_Callback(hObject, eventdata, handles)
 % hObject    handle to popup_plot (see GCBO)

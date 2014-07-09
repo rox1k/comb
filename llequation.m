@@ -1,14 +1,15 @@
-% Solving Lugiato Lefever equation using Split Step Fourier Method
+% Solving Lugiato-Lefever equation using Split Step Fourier Method
 function llequation(ModeList, ...
     PumpFreq, FSR, D2over2pi, D3over2pi, ...
     Detuning, Power, Linewidth, coupling, ...
     RefIndex, NonlinIndex, Veff, FileName)
 
 global progress;
+global c;
+global hbar;
 tic;
 
 h_cr = 1.054e-34; % Planck constant in J*s
-c = 299792458; % speed of light in m/s
 
 M = size(ModeList,1); % number of modes
 wp = PumpFreq; % pumping frequency
