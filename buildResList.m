@@ -8,5 +8,6 @@ for k=1:size(list,1)
         + (k-round(size(list,1)/2))^3 * D3over2pi/3 ...
         + nms_a*linewidth/4/(k-round(size(list,1)/2)-nms_b-0.5);
 end
+list(round(size(list,1)/2))=list(round(size(list,1)/2))+20*linewidth/4;
 reslist = list;
 end

@@ -42,7 +42,7 @@ T = zeros(timesteps_cme,1);
 for kk=1:timesteps_cme
     t1 = start_time + (kk-1)*(end_time - start_time)/timesteps_cme;
     t2 = start_time + kk*(end_time - start_time)/timesteps_cme;
-    [Tx,Yx] = ode23(@coupledModeEquations, [t1  t2], inc, ode_options);
+    [Tx,Yx] = ode45(@coupledModeEquations, [t1  t2], inc, ode_options);
 %     total_steps=total_steps+size(Tx,1);
     Y(kk,:) = Yx(end,:); % save solution for current step
     T(kk) = Tx(end); % save time
@@ -53,10 +53,10 @@ toc
 % apply log10 for plotting spectrum
 spectrum_plot= abs(Y);
 % % cut-off multiplier
-% multipl=10^2;
-% spectrum_plot(spectrum_plot>0)=log10(multipl*spectrum_plot(spectrum_plot>0));
+multipl=10^2;
+spectrum_plot(spectrum_plot>0)=log10(multipl*spectrum_plot(spectrum_plot>0));
 % % filter negative specrtum after log()
-% spectrum_plot(spectrum_plot<0)=0;
+spectrum_plot(spectrum_plot<0)=0;
 spectrum_plot_transposed=spectrum_plot.';
 
 % ugly way to save global params in file

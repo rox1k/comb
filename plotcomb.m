@@ -6,12 +6,12 @@ reslist=file.a_mode_list;
 detuning=file.a_detuning_profile;
 pump_profile=file.a_pump_profile;
 initial_conditions=file.a_initial_conditions;
-ind=round(Snapshot*length(detuning));
+if strfind(filename, 'coupledeq')==1
+    % get parameters from coupled eq file
+    ind=round(Snapshot*length(detuning));
     if ind == 0
         ind = 1;
     end
-if strfind(filename, 'coupledeq')==1
-    % get parameters from coupled eq file
     modes_number = file.a_modes_number; % number of modes
     Y = file.Y; % field amplitudes for every mode
     T = file.T; % time
@@ -38,10 +38,14 @@ if strfind(filename, 'coupledeq')==1
 else
     % get parameters from llessfm file
     E=file.E;
-%     detune_step=(detune_end-detune_start)/size(E,1);
+%     detune_step=(detuning(end)-detuning(1))/size(E,1);
 %     det=detune_start:detune_step:detune_end;
-%     det=linspace(detune_start,detune_end,size(E,1));
+    det=linspace(detuning(1),detuning(end),size(E,1));
 %     ind=find(det>=Snapshot,1);
+    ind=round(Snapshot*size(E,1));
+    if ind == 0
+        ind = 1;
+    end
     power=(abs(E(ind,:)).^2);
     int_field = sum((abs(E).^2),2);
     max_amp=max(int_field);
@@ -89,11 +93,12 @@ switch flag
                         
         else
             subplot(2,2,1:2)
-            plot(detuning,int_field);
+            plot(det,int_field);
             xlabel ('Detuning, (halflinewidths)');
             ylabel ('Intracavity power (a.u.)');
             grid on
-            line([Snapshot Snapshot],[0 max_amp], 'Color','b','LineStyle','--')
+            zoom on
+            line([det(ind) det(ind)],[0 max_amp], 'Color','b','LineStyle','--')
                              
             subplot(2,2,3)            
             for ii=1:1:length(reslist)
@@ -119,7 +124,7 @@ switch flag
             ylabel('$\sum |a_i|^2$','interpreter','latex')
             grid on
         else
-            plot(detuning,int_field);
+            plot(det,int_field);
             xlabel ('detuning, un. of linewidth');
             ylabel ('intracavity power, a.u.');
             grid on
