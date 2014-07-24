@@ -24,6 +24,7 @@ global reslist;
 
 tic
 start_time = 0;
+% TODO: not correct for nonlinear detuning
 end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
 
 ode_options = ''; % default options for solver
@@ -42,7 +43,7 @@ T = zeros(timesteps_cme,1);
 for kk=1:timesteps_cme
     t1 = start_time + (kk-1)*(end_time - start_time)/timesteps_cme;
     t2 = start_time + kk*(end_time - start_time)/timesteps_cme;
-    [Tx,Yx] = ode45(@coupledModeEquations, [t1  t2], inc, ode_options);
+    [Tx,Yx] = ode23(@coupledModeEquations, [t1  t2], inc, ode_options);
 %     total_steps=total_steps+size(Tx,1);
     Y(kk,:) = Yx(end,:); % save solution for current step
     T(kk) = Tx(end); % save time

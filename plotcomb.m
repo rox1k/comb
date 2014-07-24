@@ -63,6 +63,7 @@ switch flag
             zoom on
 %             xlabel('\zeta_0')
             xlabel('time')
+            xlim([1,length(detuning)]);
             ylabel('$\sum |a_i|^2$','interpreter','latex')
             grid on
             line([ind ind],[0 max_amp], 'Color','b','LineStyle','--')
@@ -132,7 +133,8 @@ switch flag
     case 'amps'
         figure
         if strfind(filename, 'coupledeq')==1
-            contourf(detuning,N,spectrum_plot_transposed);
+%             contourf(detuning,N,spectrum_plot_transposed);
+            pcolor(detuning,N,spectrum_plot_transposed);
             shading flat;
             xlabel('time')
             ylabel('mode number')

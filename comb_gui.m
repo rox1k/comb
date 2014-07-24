@@ -66,40 +66,39 @@ global nms_a;
 global nms_b;
 global linewidth;
 global reslist;
-global pump_profile;
+global pump;
 global detuning_profile;
-global initial_conditions;
+global initial;
 global detuning_string;
-global initial_conditions_string;
-global pump_profile_string;
+global initial_string;
+global pump_string;
 
 % defaults
 hbar = 1.05457148e-34;
 c = 299792458;
 pi = 3.14159;
-timesteps_cme = 4096;
+timesteps_cme = 2048;
 
 modes_number=201;
-lambda=1553*10^-9; % in nm
+lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=2.21e11;
-d2=2.64e4;
+d2=6.28e4;
 d3=0;
 nms_a=0;
 nms_b=0;
 reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b, linewidth);
-pump_profile_string='100e-3*ones(1,timesteps_cme)';
-% pump_profile_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
-pump_profile=eval(pump_profile_string);
+pump_string='50e-3*ones(1,timesteps_cme)';
+% pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
+pump=eval(pump_string);
 
-detuning_string='linspace(-15,30,timesteps_cme)';
+detuning_string='linspace(-5,15,timesteps_cme)';
 % detuning_string={'[linspace(-15,10,timesteps_cme/2) 10*ones(1,timesteps_cme/2)]'};
 detuning_profile=eval(detuning_string);
 
-
-initial_conditions_string='randn(1,modes_number)+1i*randn(1,modes_number)';
-% initial_conditions_string='sech(25*linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
-initial_conditions=eval(initial_conditions_string);
+% initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
+initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
+initial=eval(initial_string);
 
 % Choose default command line output for comb_gui
 handles.output = hObject;
@@ -148,8 +147,11 @@ global progress;
 global snapshot;
 global reslist;
 % global sweep_speed;
+global pump;
 global pump_profile;
 global initial_conditions;
+global initial;
+global initial_string;
 global detuning_profile;
 % global timesteps_cme;
 global kappa;
@@ -180,13 +182,14 @@ eta = coupling; % coupling coefficient
 n0 = refr_index; % refractive index
 n2 = nonlin_index; % nonlinear refractive index
 g = hbar*omega0^2*c*n2/n0^2/mode_volume; % nonlinear coupling coefficient
-pump_profile=sqrt(8*eta*g/kappa^2*pump_profile/hbar/omega0); % normalized amplitutde of input field
+pump_profile=sqrt(8*eta*g/kappa^2*pump/hbar/omega0); % normalized amplitutde of input field
 
-if length(initial_conditions)==modes_number
-    initial_conditions=sqrt(2*g/kappa)*0.5*initial_conditions; % normalized initial conditions
+if length(initial)==modes_number
+    initial_conditions=sqrt(2*g/kappa)*0.5*initial; % normalized initial conditions
 else
     display('Wrong initial conditions length. Using default')
     initial_conditions=sqrt(2*g/kappa)*0.5*(randn(1,modes_number)+1i*randn(1,modes_number));
+    initial_string=mat2str(initial_conditions);
 end
 
 %simulate
@@ -526,27 +529,27 @@ global reslist;
 global c;
 
 prompt={'Modes number',...
-    'Wavelength (nm)',...
+    'Wavelength (m)',...
     'FSR (Hz)', ...
     'D2 (Hz)', ...
     'D3 (Hz)' ...
     'Distortion, a' ...
     'Distortion, b'
     };
-defaultanswer={'201','1553','35e9','1e4','0','0','0'};
+% defaultanswer={'201','1553','35e9','1e4','0','0','0'};
+defaultanswer={num2str(modes_number),num2str(c/pump_freq),num2str(fsr),num2str(d2),num2str(d3),num2str(nms_a),num2str(nms_b)};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Dispersion',1,defaultanswer,options);
 modes_number=int32(str2double(answer{1}));
-c = 299792458;
-lambda=str2double(answer{2})*10^-9; % in nm
+% lambda=str2double(answer{2})*10^-9; % in nm
+lambda=str2double(answer{2});
 pump_freq=c/lambda;
 fsr=str2double(answer{3});
 d2=str2double(answer{4});
 d3=str2double(answer{5});
 nms_a=str2double(answer{6});
 nms_b=str2double(answer{7});
-% TODO: linewidth must be set prior eigenmodes calculation
 reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b,linewidth);
 
 % --- Executes on button press in import_eigenmodes.
@@ -575,25 +578,27 @@ function pump_edit_Callback(hObject, eventdata, handles)
 % hObject    handle to pump_edit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global pump_profile;
+global pump;
 global timesteps_cme;
-global pump_profile_string;
+global pump_string;
 prompt={'Pump'};
-defaultanswer={pump_profile_string};
+defaultanswer={pump_string};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Pump profile',1,defaultanswer,options);
-pump_profile=eval(answer{1});
-pump_profile_string=answer{1};
+pump=eval(answer{1});
+pump_string=answer{1};
 
 % --- Executes on button press in pump_import.
 function pump_import_Callback(hObject, eventdata, handles)
 % hObject    handle to pump_import (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global pump_profile;
+global pump;
+global pump_string;
 [FileName,~,~] = uigetfile('*.*');
-pump_profile = csvread(FileName);
+pump = csvread(FileName);
+pump_string=mat2str(pump);
 
 
 % --- Executes on button press in edit_detuning.
@@ -627,25 +632,27 @@ function seeding_edit_Callback(hObject, eventdata, handles)
 % hObject    handle to seeding_edit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global initial_conditions;
+global initial;
 global modes_number;
-global initial_conditions_string;
+global initial_string;
 prompt={'Initial conditions'};
-defaultanswer={initial_conditions_string};
+defaultanswer={initial_string};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Seeding',1,defaultanswer,options);
-initial_conditions=eval(answer{1});
-initial_conditions_string=answer{1};
+initial=eval(answer{1});
+initial_string=answer{1};
 
 % --- Executes on button press in seeding_import.
 function seeding_import_Callback(hObject, eventdata, handles)
 % hObject    handle to seeding_import (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global initial_conditions;
+global initial;
+global initial_string;
 [FileName,~,~] = uigetfile('*.*');
-initial_conditions = csvread(FileName);
+initial = csvread(FileName);
+initial_string=mat2str(initial);
 
 % --- Executes on selection change in popup_plot.
 function popup_plot_Callback(hObject, eventdata, handles)
@@ -659,34 +666,57 @@ global snapshot;
 global filename;
 global reslist;
 global pump_profile;
+global pump;
 global modes_number;
 global detuning_profile;
 global initial_conditions;
+global initial;
+
 global fsr;
 global pump_freq;
+global d2;
+global d3;
 
 contents = cellstr(get(hObject,'String'));
 switch contents{get(hObject,'Value')}
     case 'Dispersion'
-        list=zeros(1,modes_number);
-        for k=1:size(reslist,1)
+        list=zeros(modes_number,1);
+        
+        display(modes_number);
+        display(pump_freq);
+        display(fsr);
+        display(d2);
+        display(d3);
+               
+        for k=1:modes_number
             list(k) = reslist(k)-(k-round(size(list,1)/2))*fsr-pump_freq;
         end
+        display(list);
         figure
         plot((1-round(modes_number/2):1:round(modes_number/2)-1),list)
         title ('Eigenmodes');
+        xlabel('mode number');
+        ylabel('Hz');
     case 'Pump Profile'
         figure
-        plot(linspace(1,length(pump_profile),length(pump_profile)),pump_profile)
+        plot(linspace(1,length(pump),length(pump)),pump)
+%         plot(linspace(1,length(pump_profile),length(pump_profile)),pump_profile)
         title ('Pump Profile');
+        xlabel('timestep');
+        ylabel('W');
     case 'Initial Profile'
         figure
-        plot(linspace(1,length(initial_conditions),length(initial_conditions)),abs(initial_conditions))
+        plot(linspace(1,length(initial),length(initial)),abs(initial))
+%         plot(linspace(1,length(initial_conditions),length(initial_conditions)),abs(initial_conditions))
         title ('Initial Profile');
+        xlabel('mode number');
+        ylabel('a.u.');
     case 'Detuning Profile'
         figure
         plot(linspace(1,length(detuning_profile),length(detuning_profile)),detuning_profile)
         title ('Detuning Profile');
+        xlabel('timestep');
+        ylabel('linewidths');
     case 'Total Field'
         plotcomb(filename,snapshot,'total_field');        
     case 'Amplitudes'
