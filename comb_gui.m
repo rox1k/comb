@@ -79,7 +79,7 @@ c = 299792458;
 pi = 3.14159;
 timesteps_cme = 2048;
 
-modes_number=201;
+modes_number=21;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=2.21e11;
@@ -88,6 +88,7 @@ d3=0;
 nms_a=0;
 nms_b=0;
 reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b, linewidth);
+
 pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
@@ -322,7 +323,7 @@ function modes_number_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global modes_number;
-modes_number=int32(str2double(get(hObject,'String')));
+modes_number=int64(str2double(get(hObject,'String')));
 % Hints: get(hObject,'String') returns contents of modes_number as text
 %        str2double(get(hObject,'String')) returns contents of modes_number as a double
 
@@ -541,7 +542,7 @@ defaultanswer={num2str(modes_number),num2str(c/pump_freq),num2str(fsr),num2str(d
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Dispersion',1,defaultanswer,options);
-modes_number=int32(str2double(answer{1}));
+modes_number=int64(str2double(answer{1}));
 % lambda=str2double(answer{2})*10^-9; % in nm
 lambda=str2double(answer{2});
 pump_freq=c/lambda;
@@ -680,16 +681,16 @@ global d3;
 contents = cellstr(get(hObject,'String'));
 switch contents{get(hObject,'Value')}
     case 'Dispersion'
-        list=zeros(modes_number,1);
+        list=zeros(modes_number,1,'double');
         
         display(modes_number);
         display(pump_freq);
         display(fsr);
         display(d2);
         display(d3);
-               
+        display(reslist);     
         for k=1:modes_number
-            list(k) = reslist(k)-(k-round(size(list,1)/2))*fsr-pump_freq;
+            list(k) = reslist(k)-double(int64(k-round(size(list,1)/2))*int64(fsr))-pump_freq;
         end
         display(list);
         figure
