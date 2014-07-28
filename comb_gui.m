@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 09-Jul-2014 00:35:09
+% Last Modified by GUIDE v2.5 28-Jul-2014 11:53:44
 
 % Begin initialization code - DO NOT EDIT
 
@@ -62,6 +62,8 @@ global pump_freq;
 global fsr;
 global d2;
 global d3;
+global d4;
+global d5;
 global nms_a;
 global nms_b;
 global linewidth;
@@ -79,15 +81,17 @@ c = 299792458;
 pi = 3.14159;
 timesteps_cme = 2048;
 
-modes_number=21;
+modes_number=101;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=2.21e11;
 d2=6.28e4;
 d3=0;
+d4=0;
+d5=0;
 nms_a=0;
 nms_b=0;
-reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b, linewidth);
+reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, linewidth);
 
 pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
@@ -130,9 +134,9 @@ function varargout = comb_gui_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-% --- Executes on button press in pushbutton1.
-function pushbutton1_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton1 (see GCBO)
+% --- Executes on button press in solve_cme.
+function solve_cme_Callback(hObject, eventdata, handles)
+% hObject    handle to solve_cme (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global modes_number;
@@ -165,7 +169,7 @@ global pi;
 progress=hObject;
 set(hObject,'Enable','off');
 set(handles.slider3,'Enable','off');
-pause(.1);
+pause(.01);
 
 filename=strcat('coupledeq',datestr(fix(clock),'yyyymmddHHMMSS'));
 % snapshot=detuning_profile(1)+(detuning_profile(end)-detuning_profile(1))/2;
@@ -209,41 +213,6 @@ set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
 
 
-% --- Executes on button press in ssfm_btn.
-function ssfm_btn_Callback(hObject, eventdata, handles)
-% hObject    handle to ssfm_btn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global filename;
-global progress;
-global snapshot;
-global detuning_profile;
-
-progress=hObject;
-set(hObject,'Enable','off');
-set(handles.slider3,'Enable','off');
-pause(.1);
-
-filename=strcat('llessfm',datestr(fix(clock),'yyyymmddHHMMSS'));
-% snapshot=detuning_profile(1)+(detuning_profile(end)-detuning_profile(1))/2;
-snapshot=0.5;
-% adjust slider to snapshot
-min_slider=get(handles.slider3,'Min');
-max_slider=get(handles.slider3,'Max');
-%     slider_value=snapshot*(max_slider-min_slider)+min_slider;
-slider_value=(snapshot-detuning_profile(1))/(detuning_profile(end)-detuning_profile(1))*(max_slider-min_slider)+min_slider; 
-
-%simulate
-llequation()
-
-set(hObject,'String','Solve LLE');
-set(hObject,'Enable','on');
-% axes(handles.axes);
-% cla;
- plotcomb(filename,snapshot,'all');
-set(handles.slider3,'Enable','on');
-set(handles.slider3,'Value',slider_value);
-
 % --------------------------------------------------------------------
 function FileMenu_Callback(hObject, eventdata, handles)
 % hObject    handle to FileMenu (see GCBO)
@@ -260,11 +229,11 @@ function OpenMenuItem_Callback(hObject, eventdata, handles)
 global detune_s;
 global detune_e;
 global filename;
-% global modes_number;
-% global pump_freq;
-% global fsr;
-% global d2;
-% global d3;
+global modes_number;
+global pump_freq;
+global fsr;
+global d2;
+global d3;
 global snapshot;
 global reslist;
 filename=FileName;
@@ -323,7 +292,7 @@ function modes_number_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global modes_number;
-modes_number=int64(str2double(get(hObject,'String')));
+modes_number=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of modes_number as text
 %        str2double(get(hObject,'String')) returns contents of modes_number as a double
 
@@ -523,6 +492,8 @@ global pump_freq;
 global fsr;
 global d2;
 global d3;
+global d4;
+global d5;
 global nms_a;
 global nms_b;
 global linewidth;
@@ -533,25 +504,28 @@ prompt={'Modes number',...
     'Wavelength (m)',...
     'FSR (Hz)', ...
     'D2 (Hz)', ...
-    'D3 (Hz)' ...
-    'Distortion, a' ...
+    'D3 (Hz)', ...
+    'D4 (Hz)', ...
+    'D5 (Hz)', ...
+    'Distortion, a', ...
     'Distortion, b'
     };
-% defaultanswer={'201','1553','35e9','1e4','0','0','0'};
-defaultanswer={num2str(modes_number),num2str(c/pump_freq),num2str(fsr),num2str(d2),num2str(d3),num2str(nms_a),num2str(nms_b)};
+defaultanswer={num2str(modes_number),num2str(c/pump_freq),num2str(fsr),num2str(d2),num2str(d3),num2str(d4),num2str(d5),num2str(nms_a),num2str(nms_b)};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Dispersion',1,defaultanswer,options);
-modes_number=int64(str2double(answer{1}));
+modes_number=str2double(answer{1});
 % lambda=str2double(answer{2})*10^-9; % in nm
 lambda=str2double(answer{2});
 pump_freq=c/lambda;
 fsr=str2double(answer{3});
 d2=str2double(answer{4});
 d3=str2double(answer{5});
-nms_a=str2double(answer{6});
-nms_b=str2double(answer{7});
-reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, nms_a,nms_b,linewidth);
+d4=str2double(answer{6});
+d5=str2double(answer{7});
+nms_a=str2double(answer{8});
+nms_b=str2double(answer{9});
+reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,linewidth);
 
 % --- Executes on button press in import_eigenmodes.
 function import_eigenmodes_Callback(hObject, eventdata, handles)
@@ -563,6 +537,8 @@ global reslist;
 global pump_freq;
 global fsr;
 [FileName,~,~] = uigetfile('*.*');
+% format long g
+% reslist=dlmread(FileName);
 reslist = csvread(FileName);
 modes_number = length(reslist);
 pump_freq=reslist(round(modes_number/2));
@@ -572,6 +548,10 @@ options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'FSR',1,defaultanswer,options);
 fsr=str2double(answer{1});
+display(reslist);
+display(modes_number);
+display(pump_freq);
+display(fsr);
 
 
 % --- Executes on button press in pump_edit.
@@ -586,7 +566,7 @@ prompt={'Pump'};
 defaultanswer={pump_string};
 options.Resize='on';
 options.WindowStyle='normal';
-answer=inputdlg(prompt,'Pump profile',1,defaultanswer,options);
+answer=inputdlg(prompt,'Pump profile',[1 50],defaultanswer,options);
 pump=eval(answer{1});
 pump_string=answer{1};
 
@@ -614,7 +594,7 @@ prompt={'Detuning'};
 defaultanswer={detuning_string};
 options.Resize='on';
 options.WindowStyle='normal';
-answer=inputdlg(prompt,'Detuning profile',1,defaultanswer,options);
+answer=inputdlg(prompt,'Detuning profile',[1 50],defaultanswer,options);
 detuning_profile=eval(answer{1});
 detuning_string=answer{1};
 
@@ -625,8 +605,10 @@ function import_detuning_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global detuning_profile;
+global detuning_string;
 [FileName,~,~] = uigetfile('*.*');
 detuning_profile = csvread(FileName);
+detuning_string=mat2str(detuning_profile);
 
 % --- Executes on button press in seeding_edit.
 function seeding_edit_Callback(hObject, eventdata, handles)
@@ -640,7 +622,7 @@ prompt={'Initial conditions'};
 defaultanswer={initial_string};
 options.Resize='on';
 options.WindowStyle='normal';
-answer=inputdlg(prompt,'Seeding',1,defaultanswer,options);
+answer=inputdlg(prompt,'Seeding',[1 50],defaultanswer,options);
 initial=eval(answer{1});
 initial_string=answer{1};
 
@@ -686,8 +668,8 @@ switch contents{get(hObject,'Value')}
         display(modes_number);
         display(pump_freq);
         display(fsr);
-        display(d2);
-        display(d3);
+%         display(d2);
+%         display(d3);
         display(reslist);     
         for k=1:modes_number
             list(k) = reslist(k)-double(int64(k-round(size(list,1)/2))*int64(fsr))-pump_freq;

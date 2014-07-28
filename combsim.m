@@ -32,32 +32,46 @@ ode_options = ''; % default options for solver
 % simulating
 done = 0;
 
-inc = initial_conditions;
-Y = zeros(timesteps_cme,modes_number);
-T = zeros(timesteps_cme,1);
+% inc = initial_conditions;
+% Y = zeros(timesteps_cme,modes_number);
+% T = zeros(timesteps_cme,1);
+timepoints = linspace(start_time,end_time ,timesteps_cme);
+[~,Y] = ode23(@coupledModeEquations,timepoints, initial_conditions, ode_options); % solving
+
 
 % start calculation with equation from
 % coupledModeEquations function. We divide time interval on timesteps_cme cutoffs
 % and solve equations on each interval consecutive.
 % total_steps=0;
-for kk=1:timesteps_cme
-    t1 = start_time + (kk-1)*(end_time - start_time)/timesteps_cme;
-    t2 = start_time + kk*(end_time - start_time)/timesteps_cme;
-    [Tx,Yx] = ode23(@coupledModeEquations, [t1  t2], inc, ode_options);
-%     total_steps=total_steps+size(Tx,1);
-    Y(kk,:) = Yx(end,:); % save solution for current step
-    T(kk) = Tx(end); % save time
-    inc = Yx(end,:); % set new intial conditions for the next step
-end
+% for kk=1:timesteps_cme
+%     t1 = start_time + (kk-1)*(end_time - start_time)/timesteps_cme;
+%     t2 = start_time + kk*(end_time - start_time)/timesteps_cme;
+%     [Tx,Yx] = ode45(@coupledModeEquations, [t1  t2], inc, ode_options);
+% %     total_steps=total_steps+size(Tx,1);
+%     Y(kk,:) = Yx(end,:); % save solution for current step
+%     T(kk) = Tx(end); % save time
+%     inc = Yx(end,:); % set new intial conditions for the next step
+% end
 toc 
 
+Y_wo_pump = Y;
+Y_wo_pump(:,round(modes_number/2)) = zeros(size(Y_wo_pump,1),1);
+
+
+
+% dB = 10*log10(abs(Y_wo_pump).^2);
+dB = 10*log10(abs(Y).^2);
+dB = dB-max(max(dB))+100;
+spectrum_plot=dB;
+% spectrum_plot=abs(Y_wo_pump);
+
 % apply log10 for plotting spectrum
-spectrum_plot= abs(Y);
-% % cut-off multiplier
-multipl=10^2;
-spectrum_plot(spectrum_plot>0)=log10(multipl*spectrum_plot(spectrum_plot>0));
-% % filter negative specrtum after log()
-spectrum_plot(spectrum_plot<0)=0;
+% spectrum_plot= abs(Y);
+% % % cut-off multiplier
+% multipl=10^2;
+% spectrum_plot(spectrum_plot>0)=log10(multipl*spectrum_plot(spectrum_plot>0));
+% % % filter negative specrtum after log()
+% spectrum_plot(spectrum_plot<0)=0;
 spectrum_plot_transposed=spectrum_plot.';
 
 % ugly way to save global params in file

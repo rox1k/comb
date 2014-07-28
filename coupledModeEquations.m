@@ -25,7 +25,6 @@ else
     force=pump_profile(force_indx);
 end
 
-% coupled mode equations
 % nonlinear term
 fa = fft(a);
 fNL = fa.*conj(fa).*fa;
@@ -43,6 +42,6 @@ global progress;
 if done_tmp - done > 1
     done = 100*(t-start_time)/(end_time-start_time);
     set(progress,'String',[num2str(round(done)+1) ' %']);
-    pause(.01);
+    pause(.001);
 end
 end
