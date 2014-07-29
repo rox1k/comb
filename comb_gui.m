@@ -93,7 +93,7 @@ d4=0;
 d5=0;
 nms_a=0;
 nms_b=0;
-reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, linewidth);
+reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, linewidth);
 
 pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
@@ -183,7 +183,7 @@ max_slider=get(handles.slider3,'Max');
 slider_value=snapshot*(max_slider-min_slider)+min_slider;
 
 if ~isempty(get(handles.detuning_start,'String')) && ~isempty(get(handles.detuning_end,'String'))
-    detuning_profile=linspace(str2num(get(handles.detuning_start,'String')),str2num(get(handles.detuning_end,'String')),timesteps_cme)
+    detuning_profile=linspace(str2num(get(handles.detuning_start,'String')),str2num(get(handles.detuning_end,'String')),timesteps_cme);
 end
 
 omega = 2*pi*reslist; % resonance frequencies
@@ -220,12 +220,11 @@ global omega0;
 global d1;
 global start_time;
 global end_time;
-	
+global done;	
 global modes_number;
 global detuning_profile;
 global pump_profile;
 
-res = zeros(modes_number,1);
 detuning_indx=round(length(detuning_profile)*(t-start_time)/(end_time-start_time));
 if detuning_indx == 0 
     detuning = detuning_profile(1);
@@ -243,7 +242,7 @@ end
 fa = fft(a);
 fNL = fa.*conj(fa).*fa;
 NL = ifft(fNL);
-
+res = zeros(modes_number,1);
 for k = 1:modes_number
   res(k)=-(1+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 end
@@ -269,6 +268,8 @@ global timesteps_cme;
 global initial_conditions;
 global modes_number;
 global filename;
+global start_time;
+global end_time;
 
 tic
 start_time = 0;
@@ -318,27 +319,50 @@ function OpenMenuItem_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-global detune_s;
-global detune_e;
-global filename;
 global modes_number;
-global pump_freq;
 global fsr;
-global d2;
-global d3;
+global linewidth;
+global coupling;
+global refr_index;
+global nonlin_index;
+global mode_volume; 
+global filename;
 global snapshot;
 global reslist;
-
+global sweep_speed;
+global pump_profile;
+global pump;
+global initial_conditions;
+global initial;
+global detuning_profile;
+global timesteps_cme;
 
 [filename,~,~] = uigetfile('*.mat');
 file = load(filename);
-set(handles.figure1,'Name',FileName);
-set(handles.linewidth,'String',num2str(file.a_linewidth));
-set(handles.refr_index,'String',num2str(file.a_refr_index));
-set(handles.nonlin_index,'String',num2str(file.a_nonlin_index));
-set(handles.mode_volume,'String',num2str(file.a_mode_volume));
-set(handles.coupling,'String',num2str(file.a_coupling));
-set(handles.sweep_speed,'String',num2str(file.a_sweep_speed));
+
+modes_number =file.modes_number;
+fsr=file.fsr;
+linewidth=file.linewidth;
+coupling=file.coupling;
+refr_index=file.refr_index;
+nonlin_index=file.nonlin_index;
+mode_volume=file.mode_volume; 
+reslist=file.reslist;
+sweep_speed=file.sweep_speed;
+pump_profile=file.pump_profile;
+pump=file.pump;
+initial_conditions=file.initial_conditions;
+initial=file.initial;
+detuning_profile=file.detuning_profile;
+timesteps_cme=file.timesteps_cme;
+
+set(handles.figure1,'Name',filename);
+set(handles.linewidth,'String',num2str(file.linewidth));
+set(handles.refr_index,'String',num2str(file.refr_index));
+set(handles.nonlin_index,'String',num2str(file.nonlin_index));
+set(handles.mode_volume,'String',num2str(file.mode_volume));
+set(handles.coupling,'String',num2str(file.coupling));
+set(handles.sweep_speed,'String',num2str(file.sweep_speed));
 
 snapshot=0.5;
 % adjust slider to snapshot
@@ -619,7 +643,7 @@ d4=str2double(answer{6});
 d5=str2double(answer{7});
 nms_a=str2double(answer{8});
 nms_b=str2double(answer{9});
-reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,linewidth);
+reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,linewidth);
 end
 
 % --- Executes on button press in import_eigenmodes.
@@ -763,22 +787,14 @@ contents = cellstr(get(hObject,'String'));
 switch contents{get(hObject,'Value')}
     case 'Dispersion'
         list=zeros(modes_number,1,'double');
-        
-        display(modes_number);
-        display(pump_freq);
-        display(fsr);
-%         display(d2);
-%         display(d3);
-        display(reslist);     
         for k=1:modes_number
             list(k) = reslist(k)-double(int64(k-round(size(list,1)/2))*int64(fsr))-pump_freq;
         end
-        display(list);
         figure
         plot((1-round(modes_number/2):1:round(modes_number/2)-1),list)
-        title ('Eigenmodes');
+        title ('deviation from linear grid with mean FSR');
         xlabel('mode number');
-        ylabel('Hz');
+        ylabel('$\omega_\mu-\omega_0-\mu D_1 (Hz)$','interpreter','latex');
     case 'Pump Profile'
         figure
         plot(linspace(1,length(pump),length(pump)),pump)
@@ -871,4 +887,18 @@ function detuning_end_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+end
+
+function res = eigenmodes(modes_number,pump_freq,fsr,d2over2pi,d3over2pi,d4over2pi,d5over2pi,nms_a,nms_b,linewidth)
+res = zeros(modes_number,1);
+for k=1:size(res,1)
+    res(k) = pump_freq ...
+        + (k-round(size(res,1)/2))*fsr ...
+        + (k-round(size(res,1)/2))^2 * d2over2pi/2 ...
+        + (k-round(size(res,1)/2))^3 * d3over2pi/6 ...
+        + (k-round(size(res,1)/2))^4 * d4over2pi/24 ...
+        + (k-round(size(res,1)/2))^5 * d5over2pi/120 ...
+        + nms_a*linewidth/4/(k-round(size(res,1)/2)-nms_b-0.5);
+end
+% res(round(size(res,1)/2))=res(round(size(res,1)/2))-30*linewidth;
 end
