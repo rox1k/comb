@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 28-Jul-2014 11:53:44
+% Last Modified by GUIDE v2.5 29-Jul-2014 13:54:49
 
 % Begin initialization code - DO NOT EDIT
 
@@ -44,6 +44,7 @@ else
     gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
+end
 
 % --- Executes just before comb_gui is made visible.
 function comb_gui_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -56,7 +57,7 @@ global timesteps_cme;
 global hbar;
 global c;
 global pi;
-% default dispersion
+
 global modes_number;
 global pump_freq;
 global fsr;
@@ -75,12 +76,13 @@ global detuning_string;
 global initial_string;
 global pump_string;
 
-% defaults
+% constants
 hbar = 1.05457148e-34;
 c = 299792458;
 pi = 3.14159;
 timesteps_cme = 2048;
 
+% default parameters
 modes_number=101;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
@@ -101,8 +103,8 @@ detuning_string='linspace(-5,15,timesteps_cme)';
 % detuning_string={'[linspace(-15,10,timesteps_cme/2) 10*ones(1,timesteps_cme/2)]'};
 detuning_profile=eval(detuning_string);
 
-% initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
-initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
+initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
+% initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
 initial=eval(initial_string);
 
 % Choose default command line output for comb_gui
@@ -117,7 +119,7 @@ if strcmp(get(hObject,'Visible'),'off')
 
 % constants & parameters
 end
-
+end
 
 
 % UIWAIT makes comb_gui wait for user response (see UIRESUME)
@@ -133,6 +135,7 @@ function varargout = comb_gui_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
+end
 
 % --- Executes on button press in solve_cme.
 function solve_cme_Callback(hObject, eventdata, handles)
@@ -158,7 +161,7 @@ global initial_conditions;
 global initial;
 global initial_string;
 global detuning_profile;
-% global timesteps_cme;
+global timesteps_cme;
 global kappa;
 global omega;
 global omega0;
@@ -179,7 +182,11 @@ min_slider=get(handles.slider3,'Min');
 max_slider=get(handles.slider3,'Max');
 slider_value=snapshot*(max_slider-min_slider)+min_slider;
 
-omega = 2*pi*reslist; % resonance frequencies 
+if ~isempty(get(handles.detuning_start,'String')) && ~isempty(get(handles.detuning_end,'String'))
+    detuning_profile=linspace(str2num(get(handles.detuning_start,'String')),str2num(get(handles.detuning_end,'String')),timesteps_cme)
+end
+
+omega = 2*pi*reslist; % resonance frequencies
 d1 = 2*pi*fsr;
 kappa = linewidth*2*pi; % cavity decay rate (full)
 omega0 = omega(round(modes_number/2)); % central pumped frequency
@@ -197,35 +204,120 @@ else
     initial_string=mat2str(initial_conditions);
 end
 
-%simulate
-combsim();
-
-% by tuning time we can change speed of detuning changing
-% during calculations. The more time you put in - the slower speed of tuning
-% you get [detuning = detuning0 + (t - t(0)) (detuning(end)-detuning(0))/
-% (time(end) - time(0))]
+simulate()
 set(hObject,'String','Solve CMEs');
 set(hObject,'Enable','on');
-% axes(handles.axes);
-% cla;
 plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
+end
 
+function res = coupled_modes_equations(t,a)
+
+global kappa;
+global omega;
+global omega0;
+global d1;
+global start_time;
+global end_time;
+	
+global modes_number;
+global detuning_profile;
+global pump_profile;
+
+res = zeros(modes_number,1);
+detuning_indx=round(length(detuning_profile)*(t-start_time)/(end_time-start_time));
+if detuning_indx == 0 
+    detuning = detuning_profile(1);
+else 
+    detuning = detuning_profile(detuning_indx);
+end
+force_indx=round(length(pump_profile)*(t-start_time)/(end_time-start_time));
+if force_indx == 0
+    force=pump_profile(1);
+else
+    force=pump_profile(force_indx);
+end
+
+% nonlinear term
+fa = fft(a);
+fNL = fa.*conj(fa).*fa;
+NL = ifft(fNL);
+
+for k = 1:modes_number
+  res(k)=-(1+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+end
+% adding pump to the central mode (pumped mode)
+res(round(modes_number/2)) = res(round(modes_number/2)) + force;
+
+% estimate elapsed progress
+done_tmp = 100*(t-start_time)/(end_time-start_time);
+global progress;
+if done_tmp - done > 1
+    done = 100*(t-start_time)/(end_time-start_time);
+    set(progress,'String',[num2str(round(done)+1) ' %']);
+    pause(.001);
+end
+end
+
+function simulate()
+
+global done;
+global detuning_profile;
+global sweep_speed;
+global timesteps_cme;
+global initial_conditions;
+global modes_number;
+global filename;
+
+tic
+start_time = 0;
+% TODO: not correct for nonlinear detuning
+end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
+done = 0;
+timepoints = linspace(start_time,end_time,timesteps_cme);
+[~,Y] = ode23(@coupled_modes_equations,timepoints,initial_conditions,'');
+toc 
+
+Y_wo_pump = Y;
+Y_wo_pump(:,round(modes_number/2)) = zeros(size(Y_wo_pump,1),1);
+% dB = 10*log10(abs(Y_wo_pump).^2);
+dB = 10*log10(abs(Y).^2);
+dB = dB-max(max(dB))+100;
+spectrum_plot=dB;
+% spectrum_plot=abs(Y_wo_pump);
+
+% apply log10 for plotting spectrum
+% spectrum_plot= abs(Y);
+% % % cut-off multiplier
+% multipl=10^2;
+% spectrum_plot(spectrum_plot>0)=log10(multipl*spectrum_plot(spectrum_plot>0));
+% % % filter negative specrtum after log()
+% spectrum_plot(spectrum_plot<0)=0;
+spectrum_plot_transposed=spectrum_plot.';
+
+% ugly way to save global variables in file
+globals = who('global');
+for kk = 1:numel(globals)
+  eval(sprintf('global %s', globals{kk}));
+end
+save([filename '.mat']);
+
+end
 
 % --------------------------------------------------------------------
 function FileMenu_Callback(hObject, eventdata, handles)
 % hObject    handle to FileMenu (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+end
 
 % --------------------------------------------------------------------
 function OpenMenuItem_Callback(hObject, eventdata, handles)
 % hObject    handle to OpenMenuItem (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-[FileName,~,~] = uigetfile('*.mat');
+
 global detune_s;
 global detune_e;
 global filename;
@@ -236,19 +328,11 @@ global d2;
 global d3;
 global snapshot;
 global reslist;
-filename=FileName;
 
-file = load(FileName);
-set(handles.modes_number,'String',num2str(file.a_modes_number));
-c = 299792458;
+
+[filename,~,~] = uigetfile('*.mat');
+file = load(filename);
 set(handles.figure1,'Name',FileName);
-set(handles.wavelength,'String',num2str(c/file.a_pump_freq*10^9));
-set(handles.FSR,'String',num2str(file.a_fsr));
-set(handles.d2,'String',num2str(file.a_d2));
-set(handles.d3,'String',num2str(file.a_d3));
-set(handles.pump_power,'String',num2str(file.a_pump_power));
-set(handles.detune_s,'String',num2str(file.a_detune_s));
-set(handles.detune_e,'String',num2str(file.a_detune_e));
 set(handles.linewidth,'String',num2str(file.a_linewidth));
 set(handles.refr_index,'String',num2str(file.a_refr_index));
 set(handles.nonlin_index,'String',num2str(file.a_nonlin_index));
@@ -256,15 +340,15 @@ set(handles.mode_volume,'String',num2str(file.a_mode_volume));
 set(handles.coupling,'String',num2str(file.a_coupling));
 set(handles.sweep_speed,'String',num2str(file.a_sweep_speed));
 
-snapshot=detune_s+(detune_e-detune_s)/2;
+snapshot=0.5;
 % adjust slider to snapshot
 min_slider=get(handles.slider3,'Min');
 max_slider=get(handles.slider3,'Max');
-slider_value=(snapshot-detune_s)/(detune_e-detune_s)*(max_slider-min_slider)+min_slider;
-plotcomb(FileName,snapshot,'all');
+slider_value=snapshot*(max_slider-min_slider)+min_slider;
+plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
-
+end
 
 % --------------------------------------------------------------------
 function PrintMenuItem_Callback(hObject, eventdata, handles)
@@ -272,6 +356,7 @@ function PrintMenuItem_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 printdlg(handles.figure1)
+end
 
 % --------------------------------------------------------------------
 function CloseMenuItem_Callback(hObject, eventdata, handles)
@@ -286,6 +371,7 @@ if strcmp(selection,'No')
 end
 
 delete(handles.figure1)
+end
 
 function modes_number_Callback(hObject, eventdata, handles)
 % hObject    handle to modes_number (see GCBO)
@@ -295,7 +381,7 @@ global modes_number;
 modes_number=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of modes_number as text
 %        str2double(get(hObject,'String')) returns contents of modes_number as a double
-
+end
 
 function linewidth_Callback(hObject, eventdata, handles)
 % hObject    handle to linewidth (see GCBO)
@@ -305,7 +391,7 @@ global linewidth;
 linewidth=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of linewidth as text
 %        str2double(get(hObject,'String')) returns contents of linewidth as a double
-
+end
 
 % --- Executes during object creation, after setting all properties.
 function linewidth_CreateFcn(hObject, eventdata, handles)
@@ -321,6 +407,7 @@ linewidth=str2double(get(hObject,'String'));
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+end
 
 function refr_index_Callback(hObject, eventdata, handles)
 % hObject    handle to refr_index (see GCBO)
@@ -330,7 +417,7 @@ global refr_index;
 refr_index=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of refr_index as text
 %        str2double(get(hObject,'String')) returns contents of refr_index as a double
-
+end
 
 % --- Executes during object creation, after setting all properties.
 function refr_index_CreateFcn(hObject, eventdata, handles)
@@ -346,6 +433,7 @@ refr_index=str2double(get(hObject,'String'));
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+end
 
 function nonlin_index_Callback(hObject, eventdata, handles)
 % hObject    handle to nonlin_index (see GCBO)
@@ -355,7 +443,7 @@ global nonlin_index;
 nonlin_index=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of nonlin_index as text
 %        str2double(get(hObject,'String')) returns contents of nonlin_index as a double
-
+end
 
 % --- Executes during object creation, after setting all properties.
 function nonlin_index_CreateFcn(hObject, eventdata, handles)
@@ -371,6 +459,7 @@ nonlin_index=str2double(get(hObject,'String'));
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+end
 
 function mode_volume_Callback(hObject, eventdata, handles)
 % hObject    handle to mode_volume (see GCBO)
@@ -380,7 +469,7 @@ global mode_volume;
 mode_volume=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of mode_volume as text
 %        str2double(get(hObject,'String')) returns contents of mode_volume as a double
-
+end
 
 % --- Executes during object creation, after setting all properties.
 function mode_volume_CreateFcn(hObject, eventdata, handles)
@@ -396,6 +485,7 @@ mode_volume=str2double(get(hObject,'String'));
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+end
 
 function coupling_Callback(hObject, eventdata, handles)
 % hObject    handle to coupling (see GCBO)
@@ -405,7 +495,7 @@ global coupling;
 coupling=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of coupling as text
 %        str2double(get(hObject,'String')) returns contents of coupling as a double
-
+end
 
 % --- Executes during object creation, after setting all properties.
 function coupling_CreateFcn(hObject, eventdata, handles)
@@ -414,12 +504,13 @@ function coupling_CreateFcn(hObject, eventdata, handles)
 % handles    empty - handles not created until after all CreateFcns called
 global coupling_handler;
 coupling_handler=hObject;
-global coupling;
+global coupling;    
 coupling=str2double(get(hObject,'String'));
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
+end
 end
 
 % --- Executes during object creation, after setting all properties.
@@ -427,6 +518,7 @@ function figure1_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
+end
 
 function sweep_speed_Callback(hObject, eventdata, handles)
 % hObject    handle to sweep_speed (see GCBO)
@@ -436,7 +528,7 @@ global sweep_speed;
 sweep_speed=str2double(get(hObject,'String'));
 % Hints: get(hObject,'String') returns contents of sweep_speed as text
 %        str2double(get(hObject,'String')) returns contents of sweep_speed as a double
-
+end
 
 % --- Executes during object creation, after setting all properties.
 function sweep_speed_CreateFcn(hObject, eventdata, handles)
@@ -451,6 +543,7 @@ sweep_speed=str2double(get(hObject,'String'));
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
+end
 end
 
 % --- Executes on slider movement.
@@ -469,7 +562,7 @@ snapshot=(value_slider-min_slider)/(max_slider-min_slider);
 plotcomb(filename,snapshot,'all')
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-
+end
 
 % --- Executes during object creation, after setting all properties.
 function slider3_CreateFcn(hObject, eventdata, handles)
@@ -480,6 +573,7 @@ set(hObject,'Enable','off');
 % Hint: slider controls usually have a light gray background.
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
 end
 
 % --- Executes on button press in edit_modes.
@@ -526,6 +620,7 @@ d5=str2double(answer{7});
 nms_a=str2double(answer{8});
 nms_b=str2double(answer{9});
 reslist = buildResList(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,linewidth);
+end
 
 % --- Executes on button press in import_eigenmodes.
 function import_eigenmodes_Callback(hObject, eventdata, handles)
@@ -548,11 +643,7 @@ options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'FSR',1,defaultanswer,options);
 fsr=str2double(answer{1});
-display(reslist);
-display(modes_number);
-display(pump_freq);
-display(fsr);
-
+end
 
 % --- Executes on button press in pump_edit.
 function pump_edit_Callback(hObject, eventdata, handles)
@@ -569,6 +660,7 @@ options.WindowStyle='normal';
 answer=inputdlg(prompt,'Pump profile',[1 50],defaultanswer,options);
 pump=eval(answer{1});
 pump_string=answer{1};
+end
 
 % --- Executes on button press in pump_import.
 function pump_import_Callback(hObject, eventdata, handles)
@@ -580,7 +672,7 @@ global pump_string;
 [FileName,~,~] = uigetfile('*.*');
 pump = csvread(FileName);
 pump_string=mat2str(pump);
-
+end
 
 % --- Executes on button press in edit_detuning.
 function edit_detuning_Callback(hObject, eventdata, handles)
@@ -597,7 +689,9 @@ options.WindowStyle='normal';
 answer=inputdlg(prompt,'Detuning profile',[1 50],defaultanswer,options);
 detuning_profile=eval(answer{1});
 detuning_string=answer{1};
-
+set(handles.detuning_start,'String','');
+set(handles.detuning_end,'String','');
+end
 
 % --- Executes on button press in import_detuning.
 function import_detuning_Callback(hObject, eventdata, handles)
@@ -609,6 +703,9 @@ global detuning_string;
 [FileName,~,~] = uigetfile('*.*');
 detuning_profile = csvread(FileName);
 detuning_string=mat2str(detuning_profile);
+set(handles.detuning_start,'String','');
+set(handles.detuning_end,'String','');
+end
 
 % --- Executes on button press in seeding_edit.
 function seeding_edit_Callback(hObject, eventdata, handles)
@@ -625,6 +722,7 @@ options.WindowStyle='normal';
 answer=inputdlg(prompt,'Seeding',[1 50],defaultanswer,options);
 initial=eval(answer{1});
 initial_string=answer{1};
+end
 
 % --- Executes on button press in seeding_import.
 function seeding_import_Callback(hObject, eventdata, handles)
@@ -636,6 +734,7 @@ global initial_string;
 [FileName,~,~] = uigetfile('*.*');
 initial = csvread(FileName);
 initial_string=mat2str(initial);
+end
 
 % --- Executes on selection change in popup_plot.
 function popup_plot_Callback(hObject, eventdata, handles)
@@ -709,6 +808,7 @@ switch contents{get(hObject,'Value')}
     case 'Waveform'
         plotcomb(filename,snapshot,'waveform');
 end
+end
 
 % --- Executes during object creation, after setting all properties.
 function popup_plot_CreateFcn(hObject, eventdata, handles)
@@ -720,4 +820,55 @@ function popup_plot_CreateFcn(hObject, eventdata, handles)
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
+end
+end
+
+function detuning_start_Callback(hObject, eventdata, handles)
+% hObject    handle to detuning_start (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of detuning_start as text
+%        str2double(get(hObject,'String')) returns contents of detuning_start as a double
+global detuning_start;
+detuning_start=str2double(get(hObject,'String'));
+
+end
+
+% --- Executes during object creation, after setting all properties.
+function detuning_start_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detuning_start (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end
+
+
+function detuning_end_Callback(hObject, eventdata, handles)
+% hObject    handle to detuning_end (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of detuning_end as text
+%        str2double(get(hObject,'String')) returns contents of detuning_end as a double
+global detuning_end;
+detuning_end=str2double(get(hObject,'String'));
+end
+
+% --- Executes during object creation, after setting all properties.
+function detuning_end_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to detuning_end (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
 end

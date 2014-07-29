@@ -1,64 +1,24 @@
-function combsim()
+function simulate()
 
 global done;
 global detuning_profile;
-global start_time;
-global end_time;
 global sweep_speed;
 global timesteps_cme;
 global initial_conditions;
 global modes_number;
 global filename;
 
-global coupling;
-global pump_freq;
-global fsr;
-global d2;
-global d3;
-global linewidth;
-global refr_index;
-global nonlin_index;
-global mode_volume; 
-global pump_profile;
-global reslist;
-
 tic
 start_time = 0;
 % TODO: not correct for nonlinear detuning
 end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
-
-ode_options = ''; % default options for solver
-
-% simulating
 done = 0;
-
-% inc = initial_conditions;
-% Y = zeros(timesteps_cme,modes_number);
-% T = zeros(timesteps_cme,1);
-timepoints = linspace(start_time,end_time ,timesteps_cme);
-[~,Y] = ode23(@coupledModeEquations,timepoints, initial_conditions, ode_options); % solving
-
-
-% start calculation with equation from
-% coupledModeEquations function. We divide time interval on timesteps_cme cutoffs
-% and solve equations on each interval consecutive.
-% total_steps=0;
-% for kk=1:timesteps_cme
-%     t1 = start_time + (kk-1)*(end_time - start_time)/timesteps_cme;
-%     t2 = start_time + kk*(end_time - start_time)/timesteps_cme;
-%     [Tx,Yx] = ode45(@coupledModeEquations, [t1  t2], inc, ode_options);
-% %     total_steps=total_steps+size(Tx,1);
-%     Y(kk,:) = Yx(end,:); % save solution for current step
-%     T(kk) = Tx(end); % save time
-%     inc = Yx(end,:); % set new intial conditions for the next step
-% end
+timepoints = linspace(start_time,end_time,timesteps_cme);
+[~,Y] = ode23(@coupledModeEquations,timepoints,initial_conditions,'');
 toc 
 
 Y_wo_pump = Y;
 Y_wo_pump(:,round(modes_number/2)) = zeros(size(Y_wo_pump,1),1);
-
-
-
 % dB = 10*log10(abs(Y_wo_pump).^2);
 dB = 10*log10(abs(Y).^2);
 dB = dB-max(max(dB))+100;
@@ -74,23 +34,11 @@ spectrum_plot=dB;
 % spectrum_plot(spectrum_plot<0)=0;
 spectrum_plot_transposed=spectrum_plot.';
 
-% ugly way to save global params in file
-a_coupling=coupling;
-a_detuning_profile=detuning_profile;
-a_modes_number=modes_number;
-a_pump_freq=pump_freq;
-a_fsr=fsr;
-a_d2=d2;
-a_d3=d3;
-a_pump_profile=pump_profile;
-a_linewidth=linewidth;
-a_refr_index=refr_index;
-a_nonlin_index=nonlin_index;
-a_mode_volume=mode_volume;
-a_sweep_speed=sweep_speed;
-a_mode_list = reslist;
-a_initial_conditions=initial_conditions;
-
+% ugly way to save global variables in file
+globals = who('global');
+for kk = 1:numel(globals)
+  eval(sprintf('global %s', globals{kk}));
+end
 save([filename '.mat']);
 
 end
