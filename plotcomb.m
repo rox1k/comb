@@ -94,6 +94,8 @@ switch flag
         
 %             contourf(detuning_profile,N,spectrum_plot_transposed);
         pcolor(1:plotsteps,N,spectrum_plot_transposed);
+        colorbar
+%         colormap('hsv');
         shading flat;
         xlabel('time')
         ylabel('mode number')

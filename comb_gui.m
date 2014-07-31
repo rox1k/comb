@@ -89,7 +89,7 @@ modes_number=201;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=2.21e11;
-d2=-6.28e4;
+d2=6.28e4;
 d3=0;
 d4=0;
 d5=0;
@@ -101,8 +101,8 @@ pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
-% detuning_string='linspace(-5,15,timesteps_cme)';
-detuning_string='[linspace(-5,3,timesteps_cme/2) 3*ones(1,timesteps_cme/2)]';
+detuning_string='linspace(-5,15,timesteps_cme)';
+% detuning_string='[linspace(-5,3,timesteps_cme/2) 3*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
 initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
@@ -245,8 +245,15 @@ fa = fft(a);
 fNL = fa.*conj(fa).*fa;
 NL = ifft(fNL);
 res = zeros(modes_number,1);
+% kappat=linspace(100*kappa,kappa,modes_number);
+% kappat=zeros(1,modes_number);
+% for k = 1:modes_number
+%     kappat(k) = kappa + (k-round(modes_number/2))^2 * 9*kappa/1e4;
+% end
+
 for k = 1:modes_number
   res(k)=-(1+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+%   res(k)=-(1+1i*2/kappat(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 end
 % adding pump to the central mode (pumped mode)
 res(round(modes_number/2)) = res(round(modes_number/2)) + force;
@@ -281,7 +288,7 @@ end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
 done = 0;
 timepoints = linspace(start_time,end_time,plotsteps);
 options = odeset('RelTol', 1e-6);
-[~,Y] = ode23s(@coupled_modes_equations,timepoints,initial_conditions,options);
+[~,Y] = ode23(@coupled_modes_equations,timepoints,initial_conditions,options);
 toc 
 
 Y_wo_pump = Y;
@@ -905,7 +912,7 @@ for k=1:size(res,1)
         + (k-round(size(res,1)/2))^5 * d5over2pi/120 ...
         + nms_a*linewidth/4/(k-round(size(res,1)/2)-nms_b-0.5);
 end
-res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
+% res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
 end
 
 function injection()
