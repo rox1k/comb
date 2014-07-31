@@ -75,19 +75,21 @@ global initial;
 global detuning_string;
 global initial_string;
 global pump_string;
+global plotsteps;
 
 % constants
 hbar = 1.05457148e-34;
 c = 299792458;
 pi = 3.14159;
-timesteps_cme = 2048;
+timesteps_cme = 2^20;
+plotsteps = 2048;
 
 % default parameters
-modes_number=101;
+modes_number=201;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=2.21e11;
-d2=6.28e4;
+d2=-6.28e4;
 d3=0;
 d4=0;
 d5=0;
@@ -99,8 +101,8 @@ pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
-detuning_string='linspace(-5,15,timesteps_cme)';
-% detuning_string={'[linspace(-15,10,timesteps_cme/2) 10*ones(1,timesteps_cme/2)]'};
+% detuning_string='linspace(-5,15,timesteps_cme)';
+detuning_string='[linspace(-5,3,timesteps_cme/2) 3*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
 initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
@@ -270,21 +272,24 @@ global modes_number;
 global filename;
 global start_time;
 global end_time;
+global plotsteps;
 
 tic
 start_time = 0;
 % TODO: not correct for nonlinear detuning
 end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
 done = 0;
-timepoints = linspace(start_time,end_time,timesteps_cme);
-[~,Y] = ode23(@coupled_modes_equations,timepoints,initial_conditions,'');
+timepoints = linspace(start_time,end_time,plotsteps);
+options = odeset('RelTol', 1e-6);
+[~,Y] = ode23s(@coupled_modes_equations,timepoints,initial_conditions,options);
 toc 
 
 Y_wo_pump = Y;
 Y_wo_pump(:,round(modes_number/2)) = zeros(size(Y_wo_pump,1),1);
 % dB = 10*log10(abs(Y_wo_pump).^2);
-dB = 10*log10(abs(Y).^2);
-dB = dB-max(max(dB))+100;
+% dB = 10*log10(abs(Y).^2);
+dB=20*log10(abs(Y));
+dB=dB-max(max(dB))+100;
 spectrum_plot=dB;
 % spectrum_plot=abs(Y_wo_pump);
 
@@ -900,5 +905,8 @@ for k=1:size(res,1)
         + (k-round(size(res,1)/2))^5 * d5over2pi/120 ...
         + nms_a*linewidth/4/(k-round(size(res,1)/2)-nms_b-0.5);
 end
-% res(round(size(res,1)/2))=res(round(size(res,1)/2))-30*linewidth;
+res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
+end
+
+function injection()
 end

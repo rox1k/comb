@@ -5,14 +5,15 @@ global c;
 file = load(filename);
 
 reslist=file.reslist;
-detuning_profile=file.detuning_profile;
+% detuning_profile=file.detuning_profile;
 modes_number = file.modes_number;
 Y = file.Y; % field amplitudes for every mode
 Y_wo_pump = file.Y_wo_pump;
+plotsteps=file.plotsteps;
 spectrum_plot=file.spectrum_plot;
 spectrum_plot_transposed=file.spectrum_plot_transposed;
 
-ind=round(Snapshot*length(detuning_profile));
+ind=round(Snapshot*plotsteps);
 if ind == 0
     ind = 1;
 end
@@ -35,11 +36,11 @@ end
 switch flag
     case 'all'
         subplot(2,2,1:2)
-        set(plot(1:length(detuning_profile),int_pow_a,'m.'),'MarkerSize',4)
+        set(plot(1:plotsteps,int_pow_a,'m.'),'MarkerSize',4)
         hold on
-        set(plot(1:length(detuning_profile),power_wo_pump,'c.'),'MarkerSize',4)
+        set(plot(1:plotsteps,power_wo_pump,'c.'),'MarkerSize',4)
 %             xlabel('\zeta_0')
-        xlim([1,length(detuning_profile)]);
+        xlim([1,plotsteps]);
         xlabel('time')
         ylabel('$\sum |a_i|^2$','interpreter','latex')
         grid on
@@ -60,7 +61,7 @@ switch flag
         end
         stem(x_bar,spectrum_plot(ind,:),'MarkerSize',2);
         xlim([min(x_bar) max(x_bar)]);
-        ylim([0 110]);
+%         ylim([0 110]);
 %         bar(x_bar,spectrum_plot(ind,:),'r');
         % ylabel('$ |a_i|$','interpreter','latex')
         xlabel('$\lambda$, nm','interpreter','latex');
@@ -70,7 +71,7 @@ switch flag
 
         subplot(2,2,4)
 %         plot(phi,abs(fftshift(pulse)));
-        plot(phi,abs(pulse));
+        plot(phi,abs(pulse),'r');
         xlim([min(phi) max(phi)]);
         xlabel('$\phi$','interpreter','latex')
         ylabel('$\Psi$','interpreter','latex')
@@ -79,11 +80,11 @@ switch flag
     % plot in separate figures
     case 'total_field'        
         figure
-        set(plot(1:length(detuning_profile),int_pow_a,'m.'),'MarkerSize',4)
+        set(plot(1:plotsteps,int_pow_a,'m.'),'MarkerSize',4)
         hold on
-        set(plot(1:length(detuning_profile),power_wo_pump,'c.'),'MarkerSize',4)
+        set(plot(1:plotsteps,power_wo_pump,'c.'),'MarkerSize',4)
 %             xlabel('\zeta_0')
-        xlim([1,length(detuning_profile)]);
+        xlim([1,plotsteps]);
         xlabel('time')
         ylabel('$\sum |a_i|^2$','interpreter','latex')
         grid on
@@ -92,7 +93,7 @@ switch flag
         figure
         
 %             contourf(detuning_profile,N,spectrum_plot_transposed);
-        pcolor(detuning_profile,N,spectrum_plot_transposed);
+        pcolor(1:plotsteps,N,spectrum_plot_transposed);
         shading flat;
         xlabel('time')
         ylabel('mode number')
@@ -103,9 +104,9 @@ switch flag
             x_bar(ii)=(10^(9)*c)/reslist(ii);
         end
         
-        stem(x_bar,spectrum_plot(ind,:),'MarkerSize',2);
+        stem(x_bar,spectrum_plot(ind,:),'MarkerSize',2,'r');
         xlim([min(x_bar) max(x_bar)]);
-        ylim([0 110]);
+%         ylim([0 110]);
 %         bar(x_bar,spectrum_plot(ind,:),'r');
         xlabel('$\lambda$, nm','interpreter','latex');
         ylabel('Intensity, dB');
@@ -113,7 +114,7 @@ switch flag
     case 'waveform'
         figure
 %         plot(phi,abs(fftshift(pulse)));
-        plot(phi,abs(pulse));
+        plot(phi,abs(pulse),'r');
         xlabel('$\phi$','interpreter','latex')
         ylabel('$\Psi$','interpreter','latex')
         title ('Waveform');
