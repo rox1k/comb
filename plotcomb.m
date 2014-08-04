@@ -32,6 +32,11 @@ pulse = zeros(1,size_phi);
 for jj=1:size_phi
     pulse(1,jj) = sum(Y(ind,:).*exp(-1i*double(N*phi(jj))),2);
 end
+
+if strcmp(flag, 'injection')==1
+    figure;
+    flag = 'all';
+end
 %plotting
 switch flag
     case 'all'

@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 29-Jul-2014 13:54:49
+% Last Modified by GUIDE v2.5 04-Aug-2014 15:44:28
 
 % Begin initialization code - DO NOT EDIT
 
@@ -115,6 +115,7 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
+set(handles.inject,'Enable','off');
 % This sets up the initial plot - only do when we are invisible
 % so window can get raised using comb_gui.
 if strcmp(get(hObject,'Visible'),'off')
@@ -169,14 +170,22 @@ global omega;
 global omega0;
 global hbar; global c; global pi;
 global pump_freq; global d2, global d3, global d4, global d5, global nms_a, global nms_b
+global injection_detuning;
+global injection_force;
+
+% disable injection in simulation
+injection_detuning=0;
+injection_force=0;
 
 progress=hObject;
 set(hObject,'Enable','off');
 set(handles.slider3,'Enable','off');
+set(handles.inject,'Enable','off');
 pause(.01);
 
 filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
 
+% save parameters in .txt file
 names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'diatortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_volume';'sweep_speed';'pump';'detuning_start';'detuning_end'};
 values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;linewidth;coupling;refr_index;nonlin_index;mode_volume;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
 tbl = table(values,'RowNames',names);
@@ -218,6 +227,7 @@ set(hObject,'Enable','on');
 plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
+set(handles.inject,'Enable','on');
 end
 
 function res = coupled_modes_equations(t,a)
@@ -232,20 +242,31 @@ global done;
 global modes_number;
 global detuning_profile;
 global pump_profile;
+global injection_detuning;
+global injection_force;
+global injection_progress;
 
-detuning_indx=round(length(detuning_profile)*(t-start_time)/(end_time-start_time));
-if detuning_indx == 0 
-    detuning = detuning_profile(1);
-else 
-    detuning = detuning_profile(detuning_indx);
-end
-force_indx=round(length(pump_profile)*(t-start_time)/(end_time-start_time));
-if force_indx == 0
-    force=pump_profile(1);
+% TODO: injection_detuning might be 0
+if injection_detuning == 0
+    detuning_indx=round(length(detuning_profile)*(t-start_time)/(end_time-start_time));
+    if detuning_indx == 0 
+        detuning = detuning_profile(1);
+    else 
+        detuning = detuning_profile(detuning_indx);
+    end
 else
-    force=pump_profile(force_indx);
+    detuning=injection_detuning;
 end
-
+if injection_force == 0
+    force_indx=round(length(pump_profile)*(t-start_time)/(end_time-start_time));
+    if force_indx == 0
+        force=pump_profile(1);
+    else
+        force=pump_profile(force_indx);
+    end
+else
+    force=injection_force;
+end
 % nonlinear term
 fa = fft(a);
 fNL = fa.*conj(fa).*fa;
@@ -269,7 +290,11 @@ done_tmp = 100*(t-start_time)/(end_time-start_time);
 global progress;
 if done_tmp - done > 1
     done = 100*(t-start_time)/(end_time-start_time);
-    set(progress,'String',[num2str(round(done)+1) ' %']);
+    if injection_force==0
+        set(progress,'String',[num2str(round(done)+1) ' %']);
+    else
+        set(injection_progress,'String',[num2str(round(done)+1) ' %']);
+    end
     pause(.001);
 end
 end
@@ -286,11 +311,18 @@ global filename;
 global start_time;
 global end_time;
 global plotsteps;
+global injection_force;
+global injection_filename;
 
 tic
 start_time = 0;
 % TODO: not correct for nonlinear detuning
-end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
+if injection_force ==0
+    end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
+else
+    % we use hardcoded value for time in soliton injection simulation
+    end_time=100;
+end
 done = 0;
 timepoints = linspace(start_time,end_time,plotsteps);
 options = odeset('RelTol', 1e-6);
@@ -312,8 +344,12 @@ globals = who('global');
 for kk = 1:numel(globals)
   eval(sprintf('global %s', globals{kk}));
 end
-save([filename '.mat']);
 
+if injection_force==0
+    save([filename '.mat']);
+else
+    save([injection_filename '.mat']);
+end
 end
 
 % --------------------------------------------------------------------
@@ -384,6 +420,7 @@ slider_value=snapshot*(max_slider-min_slider)+min_slider;
 plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
+set(handles.inject,'Enable','on');
 end
 
 % --------------------------------------------------------------------
@@ -915,6 +952,40 @@ end
 % res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
 end
 
-function injection()
+% --- Executes on button press in inject.
+function inject_Callback(hObject, eventdata, handles)
+% hObject    handle to inject (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global snapshot;
+global detuning_profile;
+global pump_profile;
+global modes_number;
+global injection_detuning;
+global injection_force;
+global initial_conditions;
+global progress;
+global injection_progress;
+global injection_filename;
 
+injection_filename=strcat('injection',datestr(fix(clock),'yyyymmddHHMMSS'));
+injection_progress=hObject;
+set(progress,'Enable','off');
+injection_detuning=detuning_profile(round(length(detuning_profile)*snapshot));
+injection_force=pump_profile(round(length(pump_profile)*snapshot));
+% see Supplementary information (nphoton.2013.343-s1)
+theta=linspace(-pi,pi,modes_number);
+zeta0=injection_detuning;
+f=injection_force;
+b=sqrt(2*zeta0);
+phi0=acos(sqrt(8*zeta0)/pi/f);
+abspsi0sqr=2/3*(zeta0-sqrt(zeta0^2-3)*cosh(1/3*acosh((2*zeta0^3+18*zeta0-27*f^2)/(2*(zeta0^2-3)^(3/2)))));
+psi0=1i*f/(abspsi0sqr-zeta0+1i);
+psi=psi0+b*exp(1i*phi0)*sech(b*theta);
+initial_conditions=ifft(psi);
+simulate();
+set(progress,'Enable','on');
+set(injection_progress,'Enable','on');
+set(hObject,'String','Inject Soliton');
+plotcomb(injection_filename,0.01,'injection');
 end
