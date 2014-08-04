@@ -35,7 +35,7 @@ end
 %plotting
 switch flag
     case 'all'
-        subplot(2,2,1:2)
+        subplot(3,2,1:2)
         set(plot(1:plotsteps,int_pow_a,'m.'),'MarkerSize',4)
         hold on
         set(plot(1:plotsteps,power_wo_pump,'c.'),'MarkerSize',4)
@@ -48,14 +48,7 @@ switch flag
         hold off;        
         zoom on;
 
-        %subplot(3,2,3:4)
-        %contourf(det,N,spectrum_plot_transposed);
-        %shading flat;
-        %xlabel('time')
-        %ylabel('mode number')
-        %colormap('hsv')
-
-        subplot(2,2,3)
+        subplot(3,2,3)
         for ii=1:1:length(reslist)
             x_bar(ii)=(10^(9)*c)/reslist(ii);
         end
@@ -69,13 +62,20 @@ switch flag
         title ('Optical spectrum');
         % set(gca, 'FontSize', 12);
 
-        subplot(2,2,4)
+        subplot(3,2,4)
 %         plot(phi,abs(fftshift(pulse)));
         plot(phi,abs(pulse),'r');
         xlim([min(phi) max(phi)]);
         xlabel('$\phi$','interpreter','latex')
         ylabel('$\Psi$','interpreter','latex')
         title ('Waveform');              
+        
+        subplot(3,2,5)
+        plot(x_bar,imag(Y(ind,:)),'MarkerSize',2);
+        xlim([min(x_bar) max(x_bar)]);
+        xlabel('$\lambda$, nm','interpreter','latex');
+        ylabel('Phase');
+        title ('Phases of modes');
 
     % plot in separate figures
     case 'total_field'        
