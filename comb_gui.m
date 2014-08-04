@@ -151,12 +151,12 @@ global linewidth;
 global coupling;
 global refr_index;
 global nonlin_index;
-global mode_volume; 
+global mode_volume;
 global filename;
 global progress;
 global snapshot;
 global reslist;
-% global sweep_speed;
+global sweep_speed;
 global pump;
 global pump_profile;
 global initial_conditions;
@@ -167,16 +167,22 @@ global timesteps_cme;
 global kappa;
 global omega;
 global omega0;
-global hbar;
-global c;
-global pi;
+global hbar; global c; global pi;
+global pump_freq; global d2, global d3, global d4, global d5, global nms_a, global nms_b
 
 progress=hObject;
 set(hObject,'Enable','off');
 set(handles.slider3,'Enable','off');
 pause(.01);
 
-filename=strcat('coupledeq',datestr(fix(clock),'yyyymmddHHMMSS'));
+filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
+
+names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'diatortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_volume';'sweep_speed';'pump';'detuning_start';'detuning_end'};
+values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;linewidth;coupling;refr_index;nonlin_index;mode_volume;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
+tbl = table(values,'RowNames',names);
+writetable(tbl,strcat('params',filename_apndx,'.txt'),'WriteRowNames',true);
+
+filename=strcat('coupledeq',filename_apndx);
 % snapshot=detuning_profile(1)+(detuning_profile(end)-detuning_profile(1))/2;
 snapshot=0.5;
 % adjust slider to snapshot
@@ -299,14 +305,6 @@ dB=20*log10(abs(Y));
 dB=dB-max(max(dB))+100;
 spectrum_plot=dB;
 % spectrum_plot=abs(Y_wo_pump);
-
-% apply log10 for plotting spectrum
-% spectrum_plot= abs(Y);
-% % % cut-off multiplier
-% multipl=10^2;
-% spectrum_plot(spectrum_plot>0)=log10(multipl*spectrum_plot(spectrum_plot>0));
-% % % filter negative specrtum after log()
-% spectrum_plot(spectrum_plot<0)=0;
 spectrum_plot_transposed=spectrum_plot.';
 
 % ugly way to save global variables in file
@@ -348,6 +346,7 @@ global initial_conditions;
 global initial;
 global detuning_profile;
 global timesteps_cme;
+global plotsteps;
 
 [filename,~,~] = uigetfile('*.mat');
 file = load(filename);
@@ -367,6 +366,7 @@ initial_conditions=file.initial_conditions;
 initial=file.initial;
 detuning_profile=file.detuning_profile;
 timesteps_cme=file.timesteps_cme;
+plotsteps=file.plotsteps;
 
 set(handles.figure1,'Name',filename);
 set(handles.linewidth,'String',num2str(file.linewidth));

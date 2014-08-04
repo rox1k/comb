@@ -71,7 +71,7 @@ switch flag
         title ('Waveform');              
         
         subplot(3,2,5)
-        plot(x_bar,imag(Y(ind,:)),'MarkerSize',2);
+        plot(x_bar,imag(Y(ind,:)),'MarkerSize',2,'LineStyle','.');
         xlim([min(x_bar) max(x_bar)]);
         xlabel('$\lambda$, nm','interpreter','latex');
         ylabel('Phase');
