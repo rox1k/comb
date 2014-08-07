@@ -89,7 +89,7 @@ modes_number=201;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=2.21e11;
-d2=6.28e4;
+d2=-6.28e4;
 d3=0;
 d4=0;
 d5=0;
@@ -271,7 +271,7 @@ end
 fa = fft(a);
 fNL = fa.*conj(fa).*fa;
 NL = ifft(fNL);
-res = zeros(modes_number,1);
+res = zeros(1,modes_number);
 % kappat=linspace(100*kappa,kappa,modes_number);
 % kappat=zeros(1,modes_number);
 % for k = 1:modes_number
@@ -321,12 +321,34 @@ if injection_force ==0
     end_time = (detuning_profile(end)-detuning_profile(1))/sweep_speed+start_time;
 else
     % we use hardcoded value for time in soliton injection simulation
-    end_time=100;
+    end_time=50;
 end
 done = 0;
+
 timepoints = linspace(start_time,end_time,plotsteps);
-options = odeset('RelTol', 1e-6);
-[~,Y] = ode23(@coupled_modes_equations,timepoints,initial_conditions,options);
+
+tstep=(end_time-start_time)/plotsteps;
+h=0.005;
+a=initial_conditions;
+t=start_time;
+Y=zeros(plotsteps,modes_number);
+for kk=1:plotsteps
+    tmax=t+tstep;
+    if tmax>end_time
+        tmax=end_time;
+    end
+    while t<tmax
+        if t+h>tmax 
+            h=tmax-t;
+        end
+         [a,t,h]=rk5adapt(a,t,h);         
+    end
+    Y(kk,:)=a;
+end    
+
+% options = odeset('RelTol', 1e-6);
+% [~,Y] = ode113(@coupled_modes_equations,timepoints,initial_conditions,options);
+
 toc 
 
 Y_wo_pump = Y;
@@ -383,6 +405,7 @@ global initial;
 global detuning_profile;
 global timesteps_cme;
 global plotsteps;
+global progress;
 
 [filename,~,~] = uigetfile('*.mat');
 file = load(filename);
@@ -403,6 +426,7 @@ initial=file.initial;
 detuning_profile=file.detuning_profile;
 timesteps_cme=file.timesteps_cme;
 plotsteps=file.plotsteps;
+progress=file.progress;
 
 set(handles.figure1,'Name',filename);
 set(handles.linewidth,'String',num2str(file.linewidth));
@@ -840,7 +864,7 @@ switch contents{get(hObject,'Value')}
             list(k) = reslist(k)-double(int64(k-round(size(list,1)/2))*int64(fsr))-pump_freq;
         end
         figure
-        plot((1-round(modes_number/2):1:round(modes_number/2)-1),list)
+        plot(1-round(modes_number/2):1:round(modes_number/2)-1,list)
         title ('deviation from linear grid with mean FSR');
         xlabel('mode number');
         ylabel('$\omega_\mu-\omega_0-\mu D_1 (Hz)$','interpreter','latex');
@@ -853,7 +877,7 @@ switch contents{get(hObject,'Value')}
         ylabel('W');
     case 'Initial Profile'
         figure
-        plot(linspace(1,length(initial),length(initial)),abs(initial))
+        plot(1-round(modes_number/2):1:round(modes_number/2)-1,abs(initial))
 %         plot(linspace(1,length(initial_conditions),length(initial_conditions)),abs(initial_conditions))
         title ('Initial Profile');
         xlabel('mode number');
@@ -949,7 +973,7 @@ for k=1:size(res,1)
         + (k-round(size(res,1)/2))^5 * d5over2pi/120 ...
         + nms_a*linewidth/4/(k-round(size(res,1)/2)-nms_b-0.5);
 end
-% res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
+res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
 end
 
 % --- Executes on button press in inject.
@@ -967,25 +991,79 @@ global initial_conditions;
 global progress;
 global injection_progress;
 global injection_filename;
+global d2;
+global kappa;
 
 injection_filename=strcat('injection',datestr(fix(clock),'yyyymmddHHMMSS'));
 injection_progress=hObject;
 set(progress,'Enable','off');
+set(hObject,'Enable','off');
 injection_detuning=detuning_profile(round(length(detuning_profile)*snapshot));
 injection_force=pump_profile(round(length(pump_profile)*snapshot));
 % see Supplementary information (nphoton.2013.343-s1)
 theta=linspace(-pi,pi,modes_number);
-zeta0=injection_detuning;
+zeta0=2*injection_detuning;
 f=injection_force;
-b=sqrt(2*zeta0);
-phi0=acos(sqrt(8*zeta0)/pi/f);
-abspsi0sqr=2/3*(zeta0-sqrt(zeta0^2-3)*cosh(1/3*acosh((2*zeta0^3+18*zeta0-27*f^2)/(2*(zeta0^2-3)^(3/2)))));
+if ((2/27*zeta0*(zeta0^2+9)-f^2)<0) || (zeta0<sqrt(3))
+    display('wrong solition approximation');
+end
+b=sqrt(zeta0/d2/2/pi*kappa);
+% b=sqrt(zeta0*2);
+% phi0=acos(sqrt(8*zeta0)/pi/f);
+a=4*zeta0/pi/f+1i*sqrt(2*zeta0-(4*zeta0/pi/f)^2);
+if abs(2*zeta0^3+18*zeta0-27*f^2)/(2*(zeta0^2-3)^(3/2))<1
+    abspsi0sqr=2/3*(zeta0-sqrt(zeta0^2-3)*cos(1/3*acos((2*zeta0^3+18*zeta0-27*f^2)/(2*(zeta0^2-3)^(3/2)))));
+else
+    abspsi0sqr=2/3*(zeta0-sqrt(zeta0^2-3)*cosh(1/3*acosh((2*zeta0^3+18*zeta0-27*f^2)/(2*(zeta0^2-3)^(3/2)))));
+end
 psi0=1i*f/(abspsi0sqr-zeta0+1i);
-psi=psi0+b*exp(1i*phi0)*sech(b*theta);
-initial_conditions=ifft(psi);
+% psi1=psi0+b*exp(1i*phi0)*sech(b*theta);
+psi=psi0+a*sech(b*theta);
+initial_conditions=ifftshift(ifft(psi));
 simulate();
 set(progress,'Enable','on');
 set(injection_progress,'Enable','on');
 set(hObject,'String','Inject Soliton');
 plotcomb(injection_filename,0.01,'injection');
+end
+
+function [a_out,t_out,h_out]=rk5adapt(a,t,h)
+
+b21=0.2; b31=0.075; b41=0.3; b51=-11/54; b61=1631/55296;
+b32=0.225; b42=-0.9; b52=2.5; b62=175/512;
+b43=1.2; b53=-70/27; b63=575/13824;
+b54=35/27; b64=44275/110592;
+b65=253/4096;
+c01=37/378; c03=250/621; c04=125/594; c06=512/1771;
+c11=2825/27648; c13=18575/48384; c14=13525/55296; c15=277/14336; c16=0.25;
+myerr=1e-7;
+hmin=0.005;
+
+k1=h*coupled_modes_equations(t,a);
+atmp=a+b21*k1;
+k2=h*coupled_modes_equations(t+0.2*h,atmp);
+atmp=a+b31*k1+b32*k2;	
+k3=h*coupled_modes_equations(t+0.3*h,atmp);
+atmp=a+b41*k1+b42*k2+b43*k3;
+k4=h*coupled_modes_equations(t+0.6*h,atmp);
+atmp=a+b51*k1+b52*k2+b53*k3+b54*k4;
+k5=h*coupled_modes_equations(t+h,atmp);
+atmp=a+b61*k1+b62*k2+b63*k3+b64*k4+b65*k5;
+k6=h*coupled_modes_equations(t+0.875*h,atmp);
+z1=a+c11*k1+c13*k3+c14*k4+c15*k5+c16*k6;
+atmp=a+c01*k1+c03*k3+c04*k4+c06*k6;
+err=max(abs(atmp-z1));
+if (myerr>=err || h <= hmin)
+    h_out=h*0.99*(myerr/err)^0.2;
+    t_out=t+h_out;
+    a_out=atmp;
+else
+    hfactor=0.99*(myerr/err)^0.25;
+    if hfactor>0.1*h
+        h=h*hfactor;
+    else
+        h=h*0.1;
+    end
+    [a_out,t_out,h_out]=rk5adapt(a,t,h);
+end
 end
