@@ -46,7 +46,7 @@ switch flag
         set(plot(1:plotsteps,power_wo_pump,'c.'),'MarkerSize',4)
 %             xlabel('\zeta_0')
         xlim([1,plotsteps]);
-        xlabel('time')
+        xlabel('time, a.u.')
         ylabel('$\sum |a_i|^2$','interpreter','latex')
         grid on
         line([ind ind],[0 max_amp], 'Color','b','LineStyle','--')
@@ -57,15 +57,13 @@ switch flag
         for ii=1:1:length(reslist)
             x_bar(ii)=(10^(9)*c)/reslist(ii);
         end
-        stem(x_bar,spectrum_plot(ind,:),'MarkerSize',2);
+        sh=stem(x_bar,spectrum_plot(ind,:),'MarkerSize',2);
         xlim([min(x_bar) max(x_bar)]);
-%         ylim([0 110]);
-%         bar(x_bar,spectrum_plot(ind,:),'r');
-        % ylabel('$ |a_i|$','interpreter','latex')
+        ylim([min(spectrum_plot(ind,:)) 0]);
         xlabel('$\lambda$, nm','interpreter','latex');
         ylabel('Intensity, dB');
         title ('Optical spectrum');
-        % set(gca, 'FontSize', 12);
+        set(sh,'BaseValue',min(spectrum_plot(ind,:)));
 
         subplot(2,2,4)
 %         plot(phi,abs(fftshift(pulse)));
@@ -90,7 +88,7 @@ switch flag
         set(plot(1:plotsteps,power_wo_pump,'c.'),'MarkerSize',4)
 %             xlabel('\zeta_0')
         xlim([1,plotsteps]);
-        xlabel('time')
+        xlabel('time, a.u.')
         ylabel('$\sum |a_i|^2$','interpreter','latex')
         grid on
 
@@ -111,13 +109,14 @@ switch flag
             x_bar(ii)=(10^(9)*c)/reslist(ii);
         end
         
-        stem(x_bar,spectrum_plot(ind,:),'MarkerSize',2,'r');
+        sh=stem(x_bar,spectrum_plot(ind,:),'MarkerSize',2);
         xlim([min(x_bar) max(x_bar)]);
-%         ylim([0 110]);
+        ylim([min(spectrum_plot(ind,:)) 0]);
 %         bar(x_bar,spectrum_plot(ind,:),'r');
         xlabel('$\lambda$, nm','interpreter','latex');
         ylabel('Intensity, dB');
-        title ('Optical spectrum');     
+        title ('Optical spectrum');
+        set(sh,'BaseValue',min(spectrum_plot(ind,:)));
     case 'waveform'
         figure
 %         plot(phi,abs(fftshift(pulse)));

@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 04-Aug-2014 15:44:28
+% Last Modified by GUIDE v2.5 08-Aug-2014 16:41:53
 
 % Begin initialization code - DO NOT EDIT
 
@@ -76,6 +76,9 @@ global detuning_string;
 global initial_string;
 global pump_string;
 global plotsteps;
+global solver;
+global cavity_linewidths;
+global cavity_linewidths_string;
 
 % constants
 hbar = 1.05457148e-34;
@@ -85,17 +88,21 @@ timesteps_cme = 2^20;
 plotsteps = 2048;
 
 % default parameters
+solver='ode45';
 modes_number=201;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=2.21e11;
-d2=-6.28e4;
+d2=6.28e4;
 d3=0;
 d4=0;
 d5=0;
 nms_a=0;
 nms_b=0;
-reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, linewidth);
+% cavity_linewidths_string='1e6*ones(1,modes_number)';
+cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+9e6/(round(modes_number/2))^2*ind^2; end';
+eval(cavity_linewidths_string);
+reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, cavity_linewidths(round(modes_number/2)));
 
 pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
@@ -105,8 +112,8 @@ detuning_string='linspace(-5,15,timesteps_cme)';
 % detuning_string='[linspace(-5,3,timesteps_cme/2) 3*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
-initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
-% initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
+% initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
+initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
 initial=eval(initial_string);
 
 % Choose default command line output for comb_gui
@@ -172,6 +179,8 @@ global hbar; global c; global pi;
 global pump_freq; global d2, global d3, global d4, global d5, global nms_a, global nms_b
 global injection_detuning;
 global injection_force;
+global cavity_linewidths;
+global kappas;
 
 % disable injection in simulation
 injection_detuning=0;
@@ -186,7 +195,7 @@ pause(.01);
 filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
 
 % save parameters in .txt file
-names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'diatortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_volume';'sweep_speed';'pump';'detuning_start';'detuning_end'};
+names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'distortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_volume';'sweep_speed';'pump';'detuning_start';'detuning_end'};
 values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;linewidth;coupling;refr_index;nonlin_index;mode_volume;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
 tbl = table(values,'RowNames',names);
 writetable(tbl,strcat('params',filename_apndx,'.txt'),'WriteRowNames',true);
@@ -203,14 +212,20 @@ if ~isempty(get(handles.detuning_start,'String')) && ~isempty(get(handles.detuni
     detuning_profile=linspace(str2num(get(handles.detuning_start,'String')),str2num(get(handles.detuning_end,'String')),timesteps_cme);
 end
 
+if ~isempty(get(handles.linewidth,'String'))
+    cavity_linewidths=str2num(get(handles.linewidth,'String'))*ones(1,modes_number);
+end
+
 omega = 2*pi*reslist; % resonance frequencies
 d1 = 2*pi*fsr;
-kappa = linewidth*2*pi; % cavity decay rate (full)
+kappa = cavity_linewidths(round(modes_number/2))*2*pi;
+kappas=cavity_linewidths*2*pi;
 omega0 = omega(round(modes_number/2)); % central pumped frequency
 eta = coupling; % coupling coefficient
 n0 = refr_index; % refractive index
 n2 = nonlin_index; % nonlinear refractive index
-g = hbar*omega0^2*c*n2/n0^2/mode_volume; % nonlinear coupling coefficient
+Veff=mode_volume*c/n0/fsr;
+g = hbar*omega0^2*c*n2/n0^2/Veff; % nonlinear coupling coefficient
 pump_profile=sqrt(8*eta*g/kappa^2*pump/hbar/omega0); % normalized amplitutde of input field
 
 if length(initial)==modes_number
@@ -233,6 +248,7 @@ end
 function res = coupled_modes_equations(t,a)
 
 global kappa;
+global kappas;
 global omega;
 global omega0;
 global d1;
@@ -271,16 +287,11 @@ end
 fa = fft(a);
 fNL = fa.*conj(fa).*fa;
 NL = ifft(fNL);
-res = zeros(1,modes_number);
-% kappat=linspace(100*kappa,kappa,modes_number);
-% kappat=zeros(1,modes_number);
-% for k = 1:modes_number
-%     kappat(k) = kappa + (k-round(modes_number/2))^2 * 9*kappa/1e4;
-% end
+res = zeros(modes_number,1);
 
 for k = 1:modes_number
-  res(k)=-(1+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
-%   res(k)=-(1+1i*2/kappat(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+%   res(k)=-(1+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+  res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 end
 % adding pump to the central mode (pumped mode)
 res(round(modes_number/2)) = res(round(modes_number/2)) + force;
@@ -313,6 +324,7 @@ global end_time;
 global plotsteps;
 global injection_force;
 global injection_filename;
+global solver;
 
 tic
 start_time = 0;
@@ -324,44 +336,47 @@ else
     end_time=50;
 end
 done = 0;
-
 timepoints = linspace(start_time,end_time,plotsteps);
-
-tstep=(end_time-start_time)/plotsteps;
-h=0.005;
-a=initial_conditions;
-t=start_time;
-Y=zeros(plotsteps,modes_number);
-for kk=1:plotsteps
-    tmax=t+tstep;
-    if tmax>end_time
-        tmax=end_time;
-    end
-    while t<tmax
-        if t+h>tmax 
-            h=tmax-t;
+options = odeset('RelTol', 1e-6);
+switch solver
+    case 'Runge Kutta adaptive'
+        tstep=(end_time-start_time)/plotsteps;
+        h=0.005;
+        a=initial_conditions.';
+        t=start_time;
+        Y=zeros(plotsteps,modes_number);
+        for kk=1:plotsteps
+            tmax=t+tstep;
+            if tmax>end_time
+                tmax=end_time;
+            end
+            while t<tmax
+                if t+h>tmax 
+                    h=tmax-t;
+                end
+                 [a,t,h]=rk5adapt(a,t,h);         
+            end
+            Y(kk,:)=a;
         end
-         [a,t,h]=rk5adapt(a,t,h);         
-    end
-    Y(kk,:)=a;
-end    
-
-% options = odeset('RelTol', 1e-6);
-% [~,Y] = ode113(@coupled_modes_equations,timepoints,initial_conditions,options);
-
+    case 'ode45'        
+        [~,Y] = ode45(@coupled_modes_equations,timepoints,initial_conditions,options);
+    case 'ode23s'
+        [~,Y] = ode23s(@coupled_modes_equations,timepoints,initial_conditions,options);
+end
 toc 
 
 Y_wo_pump = Y;
 Y_wo_pump(:,round(modes_number/2)) = zeros(size(Y_wo_pump,1),1);
-% dB = 10*log10(abs(Y_wo_pump).^2);
-% dB = 10*log10(abs(Y).^2);
-dB=20*log10(abs(Y));
-dB=dB-max(max(dB))+100;
+dB=zeros(plotsteps,modes_number);
+for kk=1:plotsteps
+    dB(kk,:)=20*log10(abs(Y(kk,:))/max(abs(Y(kk,:))));
+end
+% dB=20*log10(abs(Y));
+% dB=dB-max(max(dB))+100;
 spectrum_plot=dB;
 % spectrum_plot=abs(Y_wo_pump);
 spectrum_plot_transposed=spectrum_plot.';
 
-% ugly way to save global variables in file
 globals = who('global');
 for kk = 1:numel(globals)
   eval(sprintf('global %s', globals{kk}));
@@ -406,6 +421,7 @@ global detuning_profile;
 global timesteps_cme;
 global plotsteps;
 global progress;
+global cavity_linewidths;
 
 [filename,~,~] = uigetfile('*.mat');
 file = load(filename);
@@ -427,6 +443,7 @@ detuning_profile=file.detuning_profile;
 timesteps_cme=file.timesteps_cme;
 plotsteps=file.plotsteps;
 progress=file.progress;
+cavity_linewidths=file.cavity_linewidths;
 
 set(handles.figure1,'Name',filename);
 set(handles.linewidth,'String',num2str(file.linewidth));
@@ -484,8 +501,10 @@ function linewidth_Callback(hObject, eventdata, handles)
 % hObject    handle to linewidth (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global linewidth;
-linewidth=str2double(get(hObject,'String'));
+global cavity_linewidths;
+global modes_number;
+
+cavity_linewidths=str2double(get(hObject,'String'))*ones(1,modes_number);
 % Hints: get(hObject,'String') returns contents of linewidth as text
 %        str2double(get(hObject,'String')) returns contents of linewidth as a double
 end
@@ -690,6 +709,7 @@ global nms_b;
 global linewidth;
 global reslist;
 global c;
+global cavity_linewidths;
 
 prompt={'Modes number',...
     'Wavelength (m)',...
@@ -716,7 +736,7 @@ d4=str2double(answer{6});
 d5=str2double(answer{7});
 nms_a=str2double(answer{8});
 nms_b=str2double(answer{9});
-reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,linewidth);
+reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,cavity_linewidths(round(modes_number/2)));
 end
 
 % --- Executes on button press in import_eigenmodes.
@@ -750,13 +770,14 @@ function pump_edit_Callback(hObject, eventdata, handles)
 global pump;
 global timesteps_cme;
 global pump_string;
-prompt={'Pump'};
+prompt={'Pump power (W)'};
 defaultanswer={pump_string};
 options.Resize='on';
 options.WindowStyle='normal';
 answer=inputdlg(prompt,'Pump profile',[1 50],defaultanswer,options);
 pump=eval(answer{1});
 pump_string=answer{1};
+set(handles.pump_constant,'String','');
 end
 
 % --- Executes on button press in pump_import.
@@ -844,21 +865,21 @@ function popup_plot_Callback(hObject, eventdata, handles)
 global snapshot;
 global filename;
 global reslist;
-global pump_profile;
+% global pump_profile;
 global pump;
 global modes_number;
 global detuning_profile;
-global initial_conditions;
+% global initial_conditions;
 global initial;
-
+global cavity_linewidths;
 global fsr;
 global pump_freq;
-global d2;
-global d3;
+% global d2;
+% global d3;
 
 contents = cellstr(get(hObject,'String'));
 switch contents{get(hObject,'Value')}
-    case 'Dispersion'
+    case 'Eigenmodes'
         list=zeros(modes_number,1,'double');
         for k=1:modes_number
             list(k) = reslist(k)-double(int64(k-round(size(list,1)/2))*int64(fsr))-pump_freq;
@@ -888,6 +909,12 @@ switch contents{get(hObject,'Value')}
         title ('Detuning Profile');
         xlabel('timestep');
         ylabel('linewidths');
+    case 'Cavity Linewidths'
+        figure
+        plot(1-round(modes_number/2):1:round(modes_number/2)-1,cavity_linewidths)
+        title ('Cavity Linewidths');
+        xlabel('mode number');
+        ylabel('Hz');
     case 'Total Field'
         plotcomb(filename,snapshot,'total_field');        
     case 'Amplitudes'
@@ -973,7 +1000,7 @@ for k=1:size(res,1)
         + (k-round(size(res,1)/2))^5 * d5over2pi/120 ...
         + nms_a*linewidth/4/(k-round(size(res,1)/2)-nms_b-0.5);
 end
-res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
+% res(round(size(res,1)/2))=res(round(size(res,1)/2))-5*linewidth;
 end
 
 % --- Executes on button press in inject.
@@ -1066,4 +1093,140 @@ else
     end
     [a_out,t_out,h_out]=rk5adapt(a,t,h);
 end
+end
+
+
+% --- Executes on selection change in solver.
+function solver_Callback(hObject, eventdata, handles)
+% hObject    handle to solver (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns solver contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from solver
+global solver;
+contents = cellstr(get(hObject,'String'));
+solver=contents{get(hObject,'Value')};
+end
+
+% --- Executes during object creation, after setting all properties.
+function solver_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to solver (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end
+
+
+% --- Executes on button press in cavity_linewdth.
+function cavity_linewdth_Callback(hObject, eventdata, handles)
+% hObject    handle to cavity_linewdth (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global cavity_linewidths;
+global modes_number;
+global cavity_linewidths_string;
+prompt={'Cavity linewiths (Hz)'};
+defaultanswer={cavity_linewidths_string};
+options.Resize='on';
+options.WindowStyle='normal';
+answer=inputdlg(prompt,'Cavity linewiths',[1 50],defaultanswer,options);
+eval(answer{1});
+cavity_linewidths_string=answer{1};
+set(handles.linewidth,'String','');
+end
+
+function pump_constant_Callback(hObject, eventdata, handles)
+% hObject    handle to pump_constant (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of pump_constant as text
+%        str2double(get(hObject,'String')) returns contents of pump_constant as a double
+global pump;
+global timesteps_cme;
+pump=str2double(get(hObject,'String'))*ones(1,timesteps_cme);
+end
+
+% --- Executes during object creation, after setting all properties.
+function pump_constant_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pump_constant (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+global pump_constant;
+global pump_constant_handler;
+pump_constant_handler=hObject;
+pump_constant=str2double(get(hObject,'String'));
+
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end
+
+
+% --------------------------------------------------------------------
+function open_parameters_Callback(hObject, eventdata, handles)
+% hObject    handle to open_parameters (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global modes_number;
+global fsr;
+global linewidth;
+global coupling;
+global refr_index;
+global nonlin_index;
+global mode_volume; 
+% global snapshot;
+% global reslist;
+global sweep_speed;
+% global pump_profile;
+% global pump;
+% global initial_conditions;
+% global initial;
+% global detuning_profile;
+% global timesteps_cme;
+% global plotsteps;
+% global progress;
+% global cavity_linewidths;
+global pump_freq;
+global d2;
+global d3;
+global d4;
+global d5;
+global nms_a;
+global nms_b;
+
+[filename,~,~] = uigetfile('*.txt');
+tbl = readtable(filename);
+% summary(tbl)
+modes_number =tbl{1,2};
+fsr=tbl{2,2};
+pump_freq=tbl{3,2};
+d2=tbl{4,2};
+d3=tbl{5,2};
+d4=tbl{6,2};
+d5=tbl{7,2};
+nms_a=tbl{8,2};
+nms_b=tbl{9,2};
+linewidth=tbl{10,2};
+coupling=tbl{11,2};
+refr_index=tbl{12,2};
+nonlin_index=tbl{13,2};
+mode_volume=tbl{14,2}; 
+sweep_speed=tbl{15,2};
+
+set(handles.linewidth,'String',num2str(linewidth));
+set(handles.refr_index,'String',num2str(refr_index));
+set(handles.nonlin_index,'String',num2str(nonlin_index));
+set(handles.mode_volume,'String',num2str(mode_volume));
+set(handles.coupling,'String',num2str(coupling));
+set(handles.sweep_speed,'String',num2str(sweep_speed));
 end
