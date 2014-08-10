@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 08-Aug-2014 16:41:53
+% Last Modified by GUIDE v2.5 08-Aug-2014 17:43:12
 
 % Begin initialization code - DO NOT EDIT
 
@@ -79,6 +79,7 @@ global plotsteps;
 global solver;
 global cavity_linewidths;
 global cavity_linewidths_string;
+global noise_to_pump;
 
 % constants
 hbar = 1.05457148e-34;
@@ -88,23 +89,24 @@ timesteps_cme = 2^20;
 plotsteps = 2048;
 
 % default parameters
-solver='ode45';
+solver='ode23s';
 modes_number=201;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
-fsr=2.21e11;
-d2=6.28e4;
-d3=0;
+fsr=190e9;
+d2=14.45e6;
+d3=2.3e5;
 d4=0;
 d5=0;
 nms_a=0;
 nms_b=0;
-% cavity_linewidths_string='1e6*ones(1,modes_number)';
-cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+9e6/(round(modes_number/2))^2*ind^2; end';
+
+cavity_linewidths_string='cavity_linewidths=150e6*ones(1,modes_number)';
+% cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+9e6/(round(modes_number/2))^2*ind^2; end';
 eval(cavity_linewidths_string);
 reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, cavity_linewidths(round(modes_number/2)));
 
-pump_string='50e-3*ones(1,timesteps_cme)';
+pump_string='1000e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
@@ -112,10 +114,11 @@ detuning_string='linspace(-5,15,timesteps_cme)';
 % detuning_string='[linspace(-5,3,timesteps_cme/2) 3*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
-% initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
-initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
+initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
+% initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
 initial=eval(initial_string);
 
+noise_to_pump=false;
 % Choose default command line output for comb_gui
 handles.output = hObject;
 
@@ -129,8 +132,9 @@ if strcmp(get(hObject,'Visible'),'off')
 
 % constants & parameters
 end
+imshow('epfl_small_logo.png','Parent',handles.axes12);
+imshow('rqc_logo.png','Parent',handles.axes14);
 end
-
 
 % UIWAIT makes comb_gui wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
@@ -196,7 +200,7 @@ filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
 
 % save parameters in .txt file
 names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'distortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_volume';'sweep_speed';'pump';'detuning_start';'detuning_end'};
-values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;linewidth;coupling;refr_index;nonlin_index;mode_volume;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
+values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;cavity_linewidths(round(modes_number/2));coupling;refr_index;nonlin_index;mode_volume;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
 tbl = table(values,'RowNames',names);
 writetable(tbl,strcat('params',filename_apndx,'.txt'),'WriteRowNames',true);
 
@@ -239,6 +243,7 @@ end
 simulate()
 set(hObject,'String','Solve CMEs');
 set(hObject,'Enable','on');
+axes(handles.axes);
 plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
@@ -261,6 +266,7 @@ global pump_profile;
 global injection_detuning;
 global injection_force;
 global injection_progress;
+global noise_to_pump;
 
 % TODO: injection_detuning might be 0
 if injection_detuning == 0
@@ -294,7 +300,11 @@ for k = 1:modes_number
   res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 end
 % adding pump to the central mode (pumped mode)
-res(round(modes_number/2)) = res(round(modes_number/2)) + force;
+if noise_to_pump == true
+    res(round(modes_number/2)) = res(round(modes_number/2)) + force + 0.01*randn*force;
+else
+    res(round(modes_number/2)) = res(round(modes_number/2)) + force;
+end
 
 % estimate elapsed progress
 done_tmp = 100*(t-start_time)/(end_time-start_time);
@@ -458,6 +468,7 @@ snapshot=0.5;
 min_slider=get(handles.slider3,'Min');
 max_slider=get(handles.slider3,'Max');
 slider_value=snapshot*(max_slider-min_slider)+min_slider;
+% axes(handles.axes);
 plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
@@ -675,6 +686,7 @@ max_slider=get(hObject,'Max');
 value_slider=get(hObject,'Value');
 % snapshot=detune_s+(detune_e-detune_s)*(value_slider-min_slider)/(max_slider-min_slider);
 snapshot=(value_slider-min_slider)/(max_slider-min_slider);
+% axes(handles.axes);
 plotcomb(filename,snapshot,'all')
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
@@ -1051,6 +1063,7 @@ simulate();
 set(progress,'Enable','on');
 set(injection_progress,'Enable','on');
 set(hObject,'String','Inject Soliton');
+axes(handles.axes);
 plotcomb(injection_filename,0.01,'injection');
 end
 
