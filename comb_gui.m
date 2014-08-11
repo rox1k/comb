@@ -89,24 +89,30 @@ timesteps_cme = 2^20;
 plotsteps = 2048;
 
 % default parameters
-solver='ode23s';
-modes_number=201;
+solver='ode45';
+modes_number=11;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
-fsr=190e9;
-d2=14.45e6;
-d3=2.3e5;
+% fsr=190e9;
+% d2=14.45e6;
+% d3=2.3e5;
+fsr=221e9;
+d2=62800;
+d3=0;
+
 d4=0;
 d5=0;
 nms_a=0;
 nms_b=0;
 
-cavity_linewidths_string='cavity_linewidths=150e6*ones(1,modes_number)';
+cavity_linewidths_string='cavity_linewidths=1e6*ones(1,modes_number)';
 % cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+9e6/(round(modes_number/2))^2*ind^2; end';
+%TODO: should be similar to initial profile, otherwise user has to know the
+%meaning of variable
 eval(cavity_linewidths_string);
 reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, cavity_linewidths(round(modes_number/2)));
 
-pump_string='1000e-3*ones(1,timesteps_cme)';
+pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
@@ -125,15 +131,25 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
-set(handles.inject,'Enable','off');
+% set(handles.inject,'Enable','off');
 % This sets up the initial plot - only do when we are invisible
 % so window can get raised using comb_gui.
 if strcmp(get(hObject,'Visible'),'off')
 
 % constants & parameters
 end
+switch solver
+    case 'ode45'
+        solver_value=1;
+    case 'Runge Kutta adaptive'
+        solver_value=2;
+    case 'ode23s'
+        solver_value=3;
+end
+set(handles.solver,'Value',solver_value);
 imshow('epfl_small_logo.png','Parent',handles.axes12);
 imshow('rqc_logo.png','Parent',handles.axes14);
+axes(handles.axes);
 end
 
 % UIWAIT makes comb_gui wait for user response (see UIRESUME)
@@ -193,7 +209,7 @@ injection_force=0;
 progress=hObject;
 set(hObject,'Enable','off');
 set(handles.slider3,'Enable','off');
-set(handles.inject,'Enable','off');
+% set(handles.inject,'Enable','off');
 pause(.01);
 
 filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
@@ -220,6 +236,11 @@ if ~isempty(get(handles.linewidth,'String'))
     cavity_linewidths=str2num(get(handles.linewidth,'String'))*ones(1,modes_number);
 end
 
+if length(cavity_linewidths)~=modes_number
+    display('Wrong cavity linewidths array length. Using default 1e6 Hz')
+    cavity_linewidths=1e6*ones(1,modes_number);
+end
+
 omega = 2*pi*reslist; % resonance frequencies
 d1 = 2*pi*fsr;
 kappa = cavity_linewidths(round(modes_number/2))*2*pi;
@@ -236,18 +257,18 @@ if length(initial)==modes_number
     initial_conditions=sqrt(2*g/kappa)*0.5*initial; % normalized initial conditions
 else
     display('Wrong initial conditions length. Using default')
-    initial_conditions=sqrt(2*g/kappa)*0.5*(randn(1,modes_number)+1i*randn(1,modes_number));
-    initial_string=mat2str(initial_conditions);
+    initial=randn(1,modes_number)+1i*randn(1,modes_number);
+    initial_conditions=sqrt(2*g/kappa)*0.5*initial;
+    initial_string=mat2str(initial_conditions);    
 end
 
 simulate()
 set(hObject,'String','Solve CMEs');
 set(hObject,'Enable','on');
-axes(handles.axes);
 plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
-set(handles.inject,'Enable','on');
+% set(handles.inject,'Enable','on');
 end
 
 function res = coupled_modes_equations(t,a)
@@ -301,7 +322,7 @@ for k = 1:modes_number
 end
 % adding pump to the central mode (pumped mode)
 if noise_to_pump == true
-    res(round(modes_number/2)) = res(round(modes_number/2)) + force + 0.01*randn*force;
+    res(round(modes_number/2)) = res(round(modes_number/2)) + force + 0.001*randn*force;
 else
     res(round(modes_number/2)) = res(round(modes_number/2)) + force;
 end
@@ -468,11 +489,10 @@ snapshot=0.5;
 min_slider=get(handles.slider3,'Min');
 max_slider=get(handles.slider3,'Max');
 slider_value=snapshot*(max_slider-min_slider)+min_slider;
-% axes(handles.axes);
 plotcomb(filename,snapshot,'all');
 set(handles.slider3,'Enable','on');
 set(handles.slider3,'Value',slider_value);
-set(handles.inject,'Enable','on');
+% set(handles.inject,'Enable','on');
 end
 
 % --------------------------------------------------------------------
@@ -686,7 +706,6 @@ max_slider=get(hObject,'Max');
 value_slider=get(hObject,'Value');
 % snapshot=detune_s+(detune_e-detune_s)*(value_slider-min_slider)/(max_slider-min_slider);
 snapshot=(value_slider-min_slider)/(max_slider-min_slider);
-% axes(handles.axes);
 plotcomb(filename,snapshot,'all')
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
@@ -1063,7 +1082,6 @@ simulate();
 set(progress,'Enable','on');
 set(injection_progress,'Enable','on');
 set(hObject,'String','Inject Soliton');
-axes(handles.axes);
 plotcomb(injection_filename,0.01,'injection');
 end
 
