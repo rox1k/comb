@@ -212,8 +212,15 @@ set(handles.slider3,'Enable','off');
 % set(handles.inject,'Enable','off');
 pause(.01);
 
-filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
+if ~isempty(get(handles.linewidth,'String'))
+    cavity_linewidths=str2num(get(handles.linewidth,'String'))*ones(1,modes_number);
+end
+if length(cavity_linewidths)~=modes_number
+    display('Wrong cavity linewidths array length. Using default 1e6 Hz')
+    cavity_linewidths=1e6*ones(1,modes_number);
+end
 
+filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
 % save parameters in .txt file
 names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'distortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_volume';'sweep_speed';'pump';'detuning_start';'detuning_end'};
 values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;cavity_linewidths(round(modes_number/2));coupling;refr_index;nonlin_index;mode_volume;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
@@ -230,15 +237,6 @@ slider_value=snapshot*(max_slider-min_slider)+min_slider;
 
 if ~isempty(get(handles.detuning_start,'String')) && ~isempty(get(handles.detuning_end,'String'))
     detuning_profile=linspace(str2num(get(handles.detuning_start,'String')),str2num(get(handles.detuning_end,'String')),timesteps_cme);
-end
-
-if ~isempty(get(handles.linewidth,'String'))
-    cavity_linewidths=str2num(get(handles.linewidth,'String'))*ones(1,modes_number);
-end
-
-if length(cavity_linewidths)~=modes_number
-    display('Wrong cavity linewidths array length. Using default 1e6 Hz')
-    cavity_linewidths=1e6*ones(1,modes_number);
 end
 
 omega = 2*pi*reslist; % resonance frequencies
