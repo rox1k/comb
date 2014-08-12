@@ -80,6 +80,12 @@ global solver;
 global cavity_linewidths;
 global cavity_linewidths_string;
 global noise_to_pump;
+global coupling;
+global refr_index;
+global nonlin_index;
+global mode_volume;
+global sweep_speed;
+
 
 % constants
 hbar = 1.05457148e-34;
@@ -90,33 +96,35 @@ plotsteps = 2048;
 
 % default parameters
 solver='ode45';
-modes_number=11;
-lambda=1553*10^-9; % in m
+modes_number=201;
+lambda=2400*10^-9; % in m
 pump_freq=c/lambda;
-% fsr=190e9;
-% d2=14.45e6;
-% d3=2.3e5;
-fsr=221e9;
-d2=62800;
-d3=0;
-
-d4=0;
+fsr=193e9;
+d2=-9.83e7;
+d3=2.88e6;
+d4=-9.69e4;
 d5=0;
 nms_a=0;
 nms_b=0;
 
-cavity_linewidths_string='cavity_linewidths=1e6*ones(1,modes_number)';
+coupling=0.5;
+refr_index=1.95;
+nonlin_index=2.5e-19;
+mode_volume=1e-12;
+sweep_speed=0.1;
+
+cavity_linewidths_string='cavity_linewidths=150e6*ones(1,modes_number)';
 % cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+9e6/(round(modes_number/2))^2*ind^2; end';
 %TODO: should be similar to initial profile, otherwise user has to know the
 %meaning of variable
 eval(cavity_linewidths_string);
 reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, cavity_linewidths(round(modes_number/2)));
 
-pump_string='50e-3*ones(1,timesteps_cme)';
+pump_string='500e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
-detuning_string='linspace(-5,15,timesteps_cme)';
+detuning_string='linspace(-5,20,timesteps_cme)';
 % detuning_string='[linspace(-5,3,timesteps_cme/2) 3*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
@@ -132,10 +140,10 @@ handles.output = hObject;
 guidata(hObject, handles);
 
 % set(handles.inject,'Enable','off');
+
 % This sets up the initial plot - only do when we are invisible
 % so window can get raised using comb_gui.
 if strcmp(get(hObject,'Visible'),'off')
-
 % constants & parameters
 end
 switch solver
@@ -147,6 +155,12 @@ switch solver
         solver_value=3;
 end
 set(handles.solver,'Value',solver_value);
+set(handles.coupling,'String',num2str(coupling));
+set(handles.refr_index,'String',num2str(refr_index));
+set(handles.nonlin_index,'String',num2str(nonlin_index));
+set(handles.mode_volume,'String',num2str(mode_volume));
+set(handles.sweep_speed,'String',num2str(sweep_speed));
+
 imshow('epfl_small_logo.png','Parent',handles.axes12);
 imshow('rqc_logo.png','Parent',handles.axes14);
 axes(handles.axes);
@@ -241,6 +255,7 @@ end
 
 omega = 2*pi*reslist; % resonance frequencies
 d1 = 2*pi*fsr;
+% TODO: should be in agreement with import eigenmodes
 kappa = cavity_linewidths(round(modes_number/2))*2*pi;
 kappas=cavity_linewidths*2*pi;
 omega0 = omega(round(modes_number/2)); % central pumped frequency
@@ -765,6 +780,10 @@ d4=str2double(answer{6});
 d5=str2double(answer{7});
 nms_a=str2double(answer{8});
 nms_b=str2double(answer{9});
+if length(cavity_linewidths)~=modes_number
+    display('Wrong cavity linewidths array length. Using default 1e6 Hz')
+    cavity_linewidths=1e6*ones(1,modes_number);
+end
 reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,cavity_linewidths(round(modes_number/2)));
 end
 
@@ -777,18 +796,21 @@ global modes_number;
 global reslist;
 global pump_freq;
 global fsr;
+global c;
 [FileName,~,~] = uigetfile('*.*');
 % format long g
 % reslist=dlmread(FileName);
 reslist = csvread(FileName);
 modes_number = length(reslist);
-pump_freq=reslist(round(modes_number/2));
-prompt={'FSR (Hz)'};
-defaultanswer={'35e9'};
+% pump_freq=reslist(round(modes_number/2));
+prompt={'FSR (Hz)', 'Wavelength (m)'};
+defaultanswer={'200e9',num2str(c/pump_freq)};
 options.Resize='on';
 options.WindowStyle='normal';
-answer=inputdlg(prompt,'FSR',1,defaultanswer,options);
+answer=inputdlg(prompt,'FSR and Pump Wavelength',1,defaultanswer,options);
 fsr=str2double(answer{1});
+lambda=str2double(answer{2});
+pump_freq=c/lambda;
 end
 
 % --- Executes on button press in pump_edit.
