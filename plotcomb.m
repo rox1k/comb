@@ -48,7 +48,7 @@ switch flag
 %             xlabel('\zeta_0')
         xlim([1,plotsteps]);
         xlabel('time, a.u.')
-        ylabel('$\sum |a_i|^2$','interpreter','latex')
+        ylabel('$\sum |a_\mu|^2$','interpreter','latex')
         grid on
         line([ind ind],[0 max_amp], 'Color','b','LineStyle','--')
         hold off;        
@@ -71,7 +71,7 @@ switch flag
         plot(phi,abs(pulse),'r');
         xlim([min(phi) max(phi)]);
         xlabel('$\phi$','interpreter','latex')
-        ylabel('$\Psi$','interpreter','latex')
+        ylabel('Intracavity Power, a.u')
         title ('Waveform');              
         
 %         subplot(3,2,5)
@@ -90,7 +90,7 @@ switch flag
 %             xlabel('\zeta_0')
         xlim([1,plotsteps]);
         xlabel('time, a.u.')
-        ylabel('$\sum |a_i|^2$','interpreter','latex')
+        ylabel('$\sum |a_\mu|^2$','interpreter','latex')
         grid on
 
     case 'amps'
@@ -123,7 +123,7 @@ switch flag
 %         plot(phi,abs(fftshift(pulse)));
         plot(phi,abs(pulse),'r');
         xlabel('$\phi$','interpreter','latex')
-        ylabel('$\Psi$','interpreter','latex')
+        ylabel('Intracavity Power, a.u')
         title ('Waveform');
         xlim([min(phi) max(phi)]);
 end

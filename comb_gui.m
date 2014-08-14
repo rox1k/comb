@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 08-Aug-2014 17:43:12
+% Last Modified by GUIDE v2.5 14-Aug-2014 14:04:21
 
 % Begin initialization code - DO NOT EDIT
 
@@ -83,7 +83,7 @@ global noise_to_pump;
 global coupling;
 global refr_index;
 global nonlin_index;
-global mode_volume;
+global mode_area;
 global sweep_speed;
 
 
@@ -110,7 +110,7 @@ nms_b=0;
 coupling=0.5;
 refr_index=1.37;
 nonlin_index=0.9e-20;
-mode_volume=5.6e-10;
+mode_area=5.6e-10;
 sweep_speed=0.1;
 
 cavity_linewidths_string='cavity_linewidths=450e3*ones(1,modes_number)';
@@ -160,7 +160,7 @@ set(handles.solver,'Value',solver_value);
 set(handles.coupling,'String',num2str(coupling));
 set(handles.refr_index,'String',num2str(refr_index));
 set(handles.nonlin_index,'String',num2str(nonlin_index));
-set(handles.mode_volume,'String',num2str(mode_volume));
+set(handles.mode_area,'String',num2str(mode_area));
 set(handles.sweep_speed,'String',num2str(sweep_speed));
 
 imshow('epfl_small_logo.png','Parent',handles.axes12);
@@ -195,7 +195,7 @@ global linewidth;
 global coupling;
 global refr_index;
 global nonlin_index;
-global mode_volume;
+global mode_area;
 global filename;
 global progress;
 global snapshot;
@@ -233,14 +233,14 @@ if ~isempty(get(handles.linewidth,'String'))
     cavity_linewidths=str2num(get(handles.linewidth,'String'))*ones(1,modes_number);
 end
 if length(cavity_linewidths)~=modes_number
-    display('Wrong cavity linewidths array length. Using default 1e6 Hz')
+    display('Wrong cavity linewidths array length. Using default cavity linewidth = 1e6 Hz')
     cavity_linewidths=1e6*ones(1,modes_number);
 end
 
 filename_apndx=datestr(fix(clock),'yyyymmddHHMMSS');
-% save parameters in .txt file
-names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'distortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_volume';'sweep_speed';'pump';'detuning_start';'detuning_end'};
-values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;cavity_linewidths(round(modes_number/2));coupling;refr_index;nonlin_index;mode_volume;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
+% save parameters in txt file
+names = {'modes_number';'fsr';'pump_frequency';'d2';'d3';'d4';'d5';'distortion_a';'distortion_b';'linewidth';'coupling';'refr_index';'nonlin_index';'mode_area';'sweep_speed';'pump';'detuning_start';'detuning_end'};
+values = [modes_number;fsr;pump_freq;d2;d3;d4;d5;nms_a;nms_b;cavity_linewidths(round(modes_number/2));coupling;refr_index;nonlin_index;mode_area;sweep_speed;pump(1);detuning_profile(1);detuning_profile(end)];
 tbl = table(values,'RowNames',names);
 writetable(tbl,strcat('params',filename_apndx,'.txt'),'WriteRowNames',true);
 
@@ -265,7 +265,7 @@ omega0 = omega(round(modes_number/2)); % central pumped frequency
 eta = coupling; % coupling coefficient
 n0 = refr_index; % refractive index
 n2 = nonlin_index; % nonlinear refractive index
-Veff=mode_volume*c/n0/fsr;
+Veff=mode_area*c/n0/fsr;
 g = hbar*omega0^2*c*n2/n0^2/Veff; % nonlinear coupling coefficient
 pump_profile=sqrt(8*eta*g/kappa^2*pump/hbar/omega0); % normalized amplitutde of input field
 norm_factor=sqrt(2*g/kappa)*0.5;
@@ -458,7 +458,7 @@ global linewidth;
 global coupling;
 global refr_index;
 global nonlin_index;
-global mode_volume; 
+global mode_area; 
 global filename;
 global snapshot;
 global reslist;
@@ -483,7 +483,7 @@ linewidth=file.linewidth;
 coupling=file.coupling;
 refr_index=file.refr_index;
 nonlin_index=file.nonlin_index;
-mode_volume=file.mode_volume; 
+mode_area=file.mode_area; 
 reslist=file.reslist;
 sweep_speed=file.sweep_speed;
 pump_profile=file.pump_profile;
@@ -501,7 +501,7 @@ set(handles.figure1,'Name',filename);
 set(handles.linewidth,'String',num2str(cavity_linewidths(round(modes_number/2))));
 set(handles.refr_index,'String',num2str(file.refr_index));
 set(handles.nonlin_index,'String',num2str(file.nonlin_index));
-set(handles.mode_volume,'String',num2str(file.mode_volume));
+set(handles.mode_area,'String',num2str(file.mode_area));
 set(handles.coupling,'String',num2str(file.coupling));
 set(handles.sweep_speed,'String',num2str(file.sweep_speed));
 
@@ -629,25 +629,25 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 end
 
-function mode_volume_Callback(hObject, eventdata, handles)
-% hObject    handle to mode_volume (see GCBO)
+function mode_area_Callback(hObject, eventdata, handles)
+% hObject    handle to mode_area (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global mode_volume;
-mode_volume=str2double(get(hObject,'String'));
-% Hints: get(hObject,'String') returns contents of mode_volume as text
-%        str2double(get(hObject,'String')) returns contents of mode_volume as a double
+global mode_area;
+mode_area=str2double(get(hObject,'String'));
+% Hints: get(hObject,'String') returns contents of mode_area as text
+%        str2double(get(hObject,'String')) returns contents of mode_area as a double
 end
 
 % --- Executes during object creation, after setting all properties.
-function mode_volume_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to mode_volume (see GCBO)
+function mode_area_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to mode_area (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
-global mode_volume;
-global mode_volume_handler;
-mode_volume_handler=hObject;
-mode_volume=str2double(get(hObject,'String'));
+global mode_area;
+global mode_area_handler;
+mode_area_handler=hObject;
+mode_area=str2double(get(hObject,'String'));
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
@@ -1246,7 +1246,7 @@ global linewidth;
 global coupling;
 global refr_index;
 global nonlin_index;
-global mode_volume; 
+global mode_area; 
 % global snapshot;
 % global reslist;
 global sweep_speed;
@@ -1283,13 +1283,13 @@ linewidth=tbl{10,2};
 coupling=tbl{11,2};
 refr_index=tbl{12,2};
 nonlin_index=tbl{13,2};
-mode_volume=tbl{14,2}; 
+mode_area=tbl{14,2}; 
 sweep_speed=tbl{15,2};
 
 set(handles.linewidth,'String',num2str(linewidth));
 set(handles.refr_index,'String',num2str(refr_index));
 set(handles.nonlin_index,'String',num2str(nonlin_index));
-set(handles.mode_volume,'String',num2str(mode_volume));
+set(handles.mode_area,'String',num2str(mode_area));
 set(handles.coupling,'String',num2str(coupling));
 set(handles.sweep_speed,'String',num2str(sweep_speed));
 end
