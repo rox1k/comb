@@ -19,7 +19,8 @@ if ind == 0
 end
 
 phi=linspace(-pi,pi,size(Y,2));    
-N = (1-round(modes_number/2):1:round(modes_number/2)-1); % mode numbers
+% N = (1-round(modes_number/2):1:round(modes_number/2)-1); % mode numbers
+N = (1:modes_number)-round(modes_number/2);
 %det = get_detuning(T); % detuning for given time
 int_pow_a = sum(Y.*conj(Y),2); % intracavity power by summing squared absolute values of phield ampl. over each raw
 power_wo_pump = sum(abs(Y_wo_pump ).^2,2);

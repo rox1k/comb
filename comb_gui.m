@@ -124,15 +124,15 @@ pump_string='100e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
-% detuning_string='linspace(-3,7,timesteps_cme)';
-detuning_string='[linspace(-5,5,timesteps_cme/2) 5*ones(1,timesteps_cme/2)]';
+detuning_string='linspace(-3,15,timesteps_cme)';
+% detuning_string='[linspace(-5,5,timesteps_cme/2) 5*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
 initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
 % initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
 initial=eval(initial_string);
-initial(1:4)=0;
-initial(modes_number-5:modes_number)=0;
+% initial(1:4)=0;
+% initial(modes_number-5:modes_number)=0;
 
 noise_to_pump=false;
 % Choose default command line output for comb_gui
@@ -472,6 +472,7 @@ global timesteps_cme;
 global plotsteps;
 global progress;
 global cavity_linewidths;
+global pump_freq;
 
 [filename,~,~] = uigetfile('*.mat');
 file = load(filename);
@@ -494,6 +495,7 @@ timesteps_cme=file.timesteps_cme;
 plotsteps=file.plotsteps;
 progress=file.progress;
 cavity_linewidths=file.cavity_linewidths;
+pump_freq=file.pump_freq;
 
 set(handles.figure1,'Name',filename);
 set(handles.linewidth,'String',num2str(cavity_linewidths(round(modes_number/2))));
@@ -937,6 +939,7 @@ global pump_freq;
 % global d2;
 % global d3;
 
+modes_centered=(1:modes_number)-round(modes_number/2);
 contents = cellstr(get(hObject,'String'));
 switch contents{get(hObject,'Value')}
     case 'Eigenmodes'
@@ -945,7 +948,7 @@ switch contents{get(hObject,'Value')}
             list(k) = reslist(k)-double(int64(k-round(size(list,1)/2))*int64(fsr))-pump_freq;
         end
         figure
-        plot(1-round(modes_number/2):1:round(modes_number/2)-1,list)
+        plot(modes_centered,list)
         title ('deviation from linear grid with mean FSR');
         xlabel('mode number');
         ylabel('$\omega_\mu-\omega_0-\mu D_1 (Hz)$','interpreter','latex');
@@ -958,7 +961,7 @@ switch contents{get(hObject,'Value')}
         ylabel('W');
     case 'Initial Profile'
         figure
-        plot(1-round(modes_number/2):1:round(modes_number/2)-1,abs(initial))
+        plot(modes_centered,abs(initial))
 %         plot(linspace(1,length(initial_conditions),length(initial_conditions)),abs(initial_conditions))
         title ('Initial Profile');
         xlabel('mode number');
@@ -971,7 +974,7 @@ switch contents{get(hObject,'Value')}
         ylabel('linewidths');
     case 'Cavity Linewidths'
         figure
-        plot(1-round(modes_number/2):1:round(modes_number/2)-1,cavity_linewidths)
+        plot(modes_centered,cavity_linewidths)
         title ('Cavity Linewidths');
         xlabel('mode number');
         ylabel('Hz');
