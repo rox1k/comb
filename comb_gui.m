@@ -22,7 +22,7 @@ function varargout = comb_gui(varargin)
 
 % Edit the above text to modify the response to help comb_gui
 
-% Last Modified by GUIDE v2.5 14-Aug-2014 14:04:21
+% Last Modified by GUIDE v2.5 14-Aug-2014 14:33:31
 
 % Begin initialization code - DO NOT EDIT
 
@@ -113,8 +113,8 @@ nonlin_index=0.9e-20;
 mode_area=5.6e-10;
 sweep_speed=0.1;
 
-cavity_linewidths_string='cavity_linewidths=450e3*ones(1,modes_number)';
-% cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+9e6/(round(modes_number/2))^2*ind^2; end';
+% cavity_linewidths_string='cavity_linewidths=450e3*ones(1,modes_number)';
+cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+2e6/(round(modes_number/2))^2*ind^2; end';
 %TODO: should be similar to initial profile, otherwise user has to know the
 %meaning of variable
 eval(cavity_linewidths_string);
@@ -148,14 +148,7 @@ guidata(hObject, handles);
 if strcmp(get(hObject,'Visible'),'off')
 % constants & parameters
 end
-switch solver
-    case 'ode45'
-        solver_value=1;
-    case 'Runge Kutta adaptive'
-        solver_value=2;
-    case 'ode23s'
-        solver_value=3;
-end
+solver_value=get_solver_value(solver);
 set(handles.solver,'Value',solver_value);
 set(handles.coupling,'String',num2str(coupling));
 set(handles.refr_index,'String',num2str(refr_index));
@@ -183,6 +176,23 @@ function varargout = comb_gui_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 end
 
+function solver_value=get_solver_value(solver)
+switch solver
+    case 'ode45'
+        solver_value=1;
+    case 'Runge Kutta adaptive'
+        solver_value=2;
+    case 'ode23s'
+        solver_value=3;
+    case 'ode23'
+        solver_value=4;
+    case 'ode23t'
+        solver_value=5;
+    case 'ode15s'
+        solver_value=6;   
+end
+
+end
 % --- Executes on button press in solve_cme.
 function solve_cme_Callback(hObject, eventdata, handles)
 % hObject    handle to solve_cme (see GCBO)
@@ -337,7 +347,8 @@ res = zeros(modes_number,1);
 for k = 1:modes_number
 %   res(k)=-(1+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 %   res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k)+norm_factor*(randn(1)+1i*randn(1));
-    res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+%     res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+    res(k)=-(kappas(k)/kappa+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 end
 % adding pump to the central mode (pumped mode)
 if noise_to_pump == true
@@ -412,6 +423,12 @@ switch solver
         [~,Y] = ode45(@coupled_modes_equations,timepoints,initial_conditions,options);
     case 'ode23s'
         [~,Y] = ode23s(@coupled_modes_equations,timepoints,initial_conditions,options);
+    case 'ode23'
+        [~,Y] = ode23(@coupled_modes_equations,timepoints,initial_conditions,options);
+    case 'ode23t'
+        [~,Y] = ode23t(@coupled_modes_equations,timepoints,initial_conditions,options);
+    case 'ode15s'
+        [~,Y] = ode15s(@coupled_modes_equations,timepoints,initial_conditions,options);
 end
 toc 
 
@@ -463,7 +480,7 @@ global filename;
 global snapshot;
 global reslist;
 global sweep_speed;
-global pump_profile;
+% global pump_string;
 global pump;
 global initial_conditions;
 global initial;
@@ -473,11 +490,15 @@ global plotsteps;
 global progress;
 global cavity_linewidths;
 global pump_freq;
+global solver;
+global initial_string;
+global cavity_linewidths_string;
+% global detuning_string;
 
 [filename,~,~] = uigetfile('*.mat');
 file = load(filename);
 
-modes_number =file.modes_number;
+modes_number=file.modes_number;
 fsr=file.fsr;
 linewidth=file.linewidth;
 coupling=file.coupling;
@@ -486,16 +507,21 @@ nonlin_index=file.nonlin_index;
 mode_area=file.mode_area; 
 reslist=file.reslist;
 sweep_speed=file.sweep_speed;
-pump_profile=file.pump_profile;
+% pump_profile=file.pump_profile;
 pump=file.pump;
+% pump_string=mat2str(pump);
 initial_conditions=file.initial_conditions;
 initial=file.initial;
+initial_string=mat2str(initial);
 detuning_profile=file.detuning_profile;
+% detuning_string=mat2str(detuning_profile);
 timesteps_cme=file.timesteps_cme;
 plotsteps=file.plotsteps;
 progress=file.progress;
 cavity_linewidths=file.cavity_linewidths;
+cavity_linewidths_string=mat2str(cavity_linewidths);
 pump_freq=file.pump_freq;
+solver=file.solver;
 
 set(handles.figure1,'Name',filename);
 set(handles.linewidth,'String',num2str(cavity_linewidths(round(modes_number/2))));
@@ -504,6 +530,13 @@ set(handles.nonlin_index,'String',num2str(file.nonlin_index));
 set(handles.mode_area,'String',num2str(file.mode_area));
 set(handles.coupling,'String',num2str(file.coupling));
 set(handles.sweep_speed,'String',num2str(file.sweep_speed));
+solver_value=get_solver_value(solver);
+set(handles.solver,'Value',solver_value);
+% TODO: here we loose arbitrary profile data, but otherwise it's too large to
+% display (timesteps_cme)
+set(handles.pump_constant,'String',num2str(pump(1)));
+set(handles.detuning_start,'String',num2str(detuning_profile(1)));
+set(handles.detuning_end,'String',num2str(detuning_profile(end)));
 
 snapshot=0.5;
 % adjust slider to snapshot
