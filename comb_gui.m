@@ -95,42 +95,44 @@ timesteps_cme = 2^20;
 plotsteps = 2048;
 
 % default parameters
-solver='ode45';
+solver='Runge Kutta adaptive';
 modes_number=201;
-lambda=2400*10^-9; % in m
+lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
-fsr=193e9;
-d2=-9.83e7;
-d3=2.88e6;
-d4=-9.69e4;
+fsr=35.2e9;
+d2=10e3;
+d3=-130;
+d4=0;
 d5=0;
 nms_a=0;
 nms_b=0;
 
 coupling=0.5;
-refr_index=1.95;
-nonlin_index=2.5e-19;
-mode_volume=1e-12;
+refr_index=1.37;
+nonlin_index=0.9e-20;
+mode_volume=5.6e-10;
 sweep_speed=0.1;
 
-cavity_linewidths_string='cavity_linewidths=150e6*ones(1,modes_number)';
+cavity_linewidths_string='cavity_linewidths=450e3*ones(1,modes_number)';
 % cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+9e6/(round(modes_number/2))^2*ind^2; end';
 %TODO: should be similar to initial profile, otherwise user has to know the
 %meaning of variable
 eval(cavity_linewidths_string);
 reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, cavity_linewidths(round(modes_number/2)));
 
-pump_string='500e-3*ones(1,timesteps_cme)';
+pump_string='100e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
-detuning_string='linspace(-5,20,timesteps_cme)';
-% detuning_string='[linspace(-5,3,timesteps_cme/2) 3*ones(1,timesteps_cme/2)]';
+% detuning_string='linspace(-3,7,timesteps_cme)';
+detuning_string='[linspace(-5,5,timesteps_cme/2) 5*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
 initial_string='randn(1,modes_number)+1i*randn(1,modes_number)';
 % initial_string='sech(linspace(-pi,pi,modes_number))+1i*zeros(1,modes_number)';
 initial=eval(initial_string);
+initial(1:4)=0;
+initial(modes_number-5:modes_number)=0;
 
 noise_to_pump=false;
 % Choose default command line output for comb_gui
@@ -215,6 +217,7 @@ global injection_detuning;
 global injection_force;
 global cavity_linewidths;
 global kappas;
+global norm_factor;
 
 % disable injection in simulation
 injection_detuning=0;
@@ -265,6 +268,7 @@ n2 = nonlin_index; % nonlinear refractive index
 Veff=mode_volume*c/n0/fsr;
 g = hbar*omega0^2*c*n2/n0^2/Veff; % nonlinear coupling coefficient
 pump_profile=sqrt(8*eta*g/kappa^2*pump/hbar/omega0); % normalized amplitutde of input field
+norm_factor=sqrt(2*g/kappa)*0.5;
 
 if length(initial)==modes_number
     initial_conditions=sqrt(2*g/kappa)*0.5*initial; % normalized initial conditions
@@ -301,6 +305,7 @@ global injection_detuning;
 global injection_force;
 global injection_progress;
 global noise_to_pump;
+global norm_factor;
 
 % TODO: injection_detuning might be 0
 if injection_detuning == 0
@@ -331,7 +336,8 @@ res = zeros(modes_number,1);
 
 for k = 1:modes_number
 %   res(k)=-(1+1i*2/kappa*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
-  res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
+%   res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k)+norm_factor*(randn(1)+1i*randn(1));
+    res(k)=-(1+1i*2/kappas(k)*double((omega(k)-omega0+(detuning*kappa)-(k-round(modes_number/2))*d1)))*a(k)+1i*NL(k);
 end
 % adding pump to the central mode (pumped mode)
 if noise_to_pump == true
@@ -385,7 +391,7 @@ options = odeset('RelTol', 1e-6);
 switch solver
     case 'Runge Kutta adaptive'
         tstep=(end_time-start_time)/plotsteps;
-        h=0.005;
+        h=0.0001;
         a=initial_conditions.';
         t=start_time;
         Y=zeros(plotsteps,modes_number);
@@ -490,7 +496,7 @@ progress=file.progress;
 cavity_linewidths=file.cavity_linewidths;
 
 set(handles.figure1,'Name',filename);
-set(handles.linewidth,'String',num2str(file.linewidth));
+set(handles.linewidth,'String',num2str(cavity_linewidths(round(modes_number/2))));
 set(handles.refr_index,'String',num2str(file.refr_index));
 set(handles.nonlin_index,'String',num2str(file.nonlin_index));
 set(handles.mode_volume,'String',num2str(file.mode_volume));
@@ -754,6 +760,7 @@ global linewidth;
 global reslist;
 global c;
 global cavity_linewidths;
+global cavity_linewidths_string;
 
 prompt={'Modes number',...
     'Wavelength (m)',...
@@ -782,7 +789,9 @@ nms_a=str2double(answer{8});
 nms_b=str2double(answer{9});
 if length(cavity_linewidths)~=modes_number
     display('Wrong cavity linewidths array length. Using default 1e6 Hz')
-    cavity_linewidths=1e6*ones(1,modes_number);
+    cavity_linewidths_string='cavity_linewidths=1e6*ones(1,modes_number)';
+    eval(cavity_linewidths_string);
+%     cavity_linewidths=1e6*ones(1,modes_number);
 end
 reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a,nms_b,cavity_linewidths(round(modes_number/2)));
 end
@@ -1115,7 +1124,7 @@ b65=253/4096;
 c01=37/378; c03=250/621; c04=125/594; c06=512/1771;
 c11=2825/27648; c13=18575/48384; c14=13525/55296; c15=277/14336; c16=0.25;
 myerr=1e-7;
-hmin=0.005;
+hmin=0.001;
 
 k1=h*coupled_modes_equations(t,a);
 atmp=a+b21*k1;
