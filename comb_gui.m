@@ -100,8 +100,8 @@ modes_number=201;
 lambda=1553*10^-9; % in m
 pump_freq=c/lambda;
 fsr=35.2e9;
-d2=10e3;
-d3=-130;
+d2=6.28e4;
+d3=-5000;
 d4=0;
 d5=0;
 nms_a=0;
@@ -110,21 +110,21 @@ nms_b=0;
 coupling=0.5;
 refr_index=1.37;
 nonlin_index=0.9e-20;
-mode_area=5.6e-10;
+mode_area=1e-10;
 sweep_speed=0.1;
 
-% cavity_linewidths_string='cavity_linewidths=450e3*ones(1,modes_number)';
-cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+2e6/(round(modes_number/2))^2*ind^2; end';
+cavity_linewidths_string='cavity_linewidths=1e6*ones(1,modes_number)';
+% cavity_linewidths_string='for kk=1:modes_number ind=kk-round(modes_number/2); cavity_linewidths(kk)=1e6+2e6/(round(modes_number/2))^2*ind^2; end';
 %TODO: should be similar to initial profile, otherwise user has to know the
 %meaning of variable
 eval(cavity_linewidths_string);
 reslist = eigenmodes(modes_number, pump_freq, fsr, d2, d3, d4, d5, nms_a, nms_b, cavity_linewidths(round(modes_number/2)));
 
-pump_string='100e-3*ones(1,timesteps_cme)';
+pump_string='50e-3*ones(1,timesteps_cme)';
 % pump_string='[10^-3*linspace(0,50,timesteps_cme/2) 50e-3*ones(1,timesteps_cme/2)]';
 pump=eval(pump_string);
 
-detuning_string='linspace(-3,15,timesteps_cme)';
+detuning_string='linspace(-5,15,timesteps_cme)';
 % detuning_string='[linspace(-5,5,timesteps_cme/2) 5*ones(1,timesteps_cme/2)]';
 detuning_profile=eval(detuning_string);
 
@@ -315,7 +315,7 @@ global injection_detuning;
 global injection_force;
 global injection_progress;
 global noise_to_pump;
-global norm_factor;
+% global norm_factor;
 
 % TODO: injection_detuning might be 0
 if injection_detuning == 0
@@ -495,7 +495,8 @@ global initial_string;
 global cavity_linewidths_string;
 % global detuning_string;
 
-[filename,~,~] = uigetfile('*.mat');
+[filename,pathname,~] = uigetfile('*.mat');
+addpath(pathname);
 file = load(filename);
 
 modes_number=file.modes_number;
